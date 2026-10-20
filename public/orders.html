@@ -344,7 +344,7 @@
                   </h4>
                   <div style="display:flex;flex-direction:column;gap:6px;">
                     ${o.negotiationHistory.map(n => `
-                      <div style="background:#ffffff;padding:8px 12px;border-radius:8px;border:1px solid #ebd9c8;font-size:0.85rem;">
+                      <div style="background:var(--color-card-bg);padding:8px 12px;border-radius:8px;border:1px solid #ebd9c8;font-size:0.85rem;">
                         <strong>${n.senderRole === 'farmer' ? '👨🏽‍🌾 Farmer' : '🏢 Buyer'}:</strong>
                         <span>₹${n.pricePerUnit}/${o.unit}</span> — <em>"${n.message}"</em>
                       </div>
