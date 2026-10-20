@@ -41,16 +41,16 @@
             ⚡ Quick Demo Accounts (One-Click Fill)
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <button type="button" class="btn btn-outline btn-sm" onclick="fillDemo('9421055501', 'password123')">
+            <button type="button" id="demo-farmer-mh" class="btn btn-outline btn-sm" data-demo-phone="9421055501" data-demo-pass="password123" onclick="fillDemo('9421055501', 'password123', 'Farmer (MH)')">
               👨🏽‍🌾 Farmer (MH)
             </button>
-            <button type="button" class="btn btn-outline btn-sm" onclick="fillDemo('9825012345', 'password123')">
+            <button type="button" id="demo-farmer-gj" class="btn btn-outline btn-sm" data-demo-phone="9825012345" data-demo-pass="password123" onclick="fillDemo('9825012345', 'password123', 'Farmer (GJ)')">
               🌱 Farmer (GJ)
             </button>
-            <button type="button" class="btn btn-outline btn-sm" onclick="fillDemo('9822011223', 'password123')">
+            <button type="button" id="demo-buyer" class="btn btn-outline btn-sm" data-demo-phone="9822011223" data-demo-pass="password123" onclick="fillDemo('9822011223', 'password123', 'FieldRoot Buyer')">
               🏢 FieldRoot Buyer
             </button>
-            <button type="button" class="btn btn-outline btn-sm" onclick="fillDemo('9876543210', 'password123')">
+            <button type="button" id="demo-admin" class="btn btn-outline btn-sm" data-demo-phone="9876543210" data-demo-pass="password123" onclick="fillDemo('9876543210', 'password123', 'Admin')">
               🛡️ Admin
             </button>
           </div>
@@ -70,12 +70,42 @@
   <script src="/js/i18n.js"></script>
   <script src="/js/nav.js"></script>
   <script>
-    function fillDemo(phone, pass) {
-      document.getElementById('login-phone').value = phone;
-      document.getElementById('login-password').value = pass;
-    }
+    window.fillDemo = function(phone, pass, accountLabel) {
+      const phoneInput = document.getElementById('login-phone');
+      const passInput = document.getElementById('login-password');
+      if (phoneInput && passInput) {
+        phoneInput.value = phone;
+        passInput.value = pass;
+        phoneInput.dispatchEvent(new Event('input', { bubbles: true }));
+        phoneInput.dispatchEvent(new Event('change', { bubbles: true }));
+        passInput.dispatchEvent(new Event('input', { bubbles: true }));
+        passInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+        phoneInput.style.borderColor = 'var(--color-leaf)';
+        passInput.style.borderColor = 'var(--color-leaf)';
+        setTimeout(() => {
+          phoneInput.style.borderColor = '';
+          passInput.style.borderColor = '';
+        }, 900);
+
+        if (typeof showToast === 'function') {
+          showToast(`✓ Filled credentials for ${accountLabel || 'Demo Account'}`, 'success', 2200);
+        }
+      }
+    };
 
     document.addEventListener('DOMContentLoaded', async () => {
+      // Attach programmatic click listeners as fallback
+      document.querySelectorAll('[data-demo-phone]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const phone = btn.getAttribute('data-demo-phone');
+          const pass = btn.getAttribute('data-demo-pass');
+          const label = btn.textContent.trim();
+          window.fillDemo(phone, pass, label);
+        });
+      });
+
       await I18N.init();
       Nav.init();
 
