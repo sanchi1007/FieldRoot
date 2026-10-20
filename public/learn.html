@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Organic Guides & Quality Standards — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container">
+      <div style="margin-bottom:28px;">
+        <span class="badge badge-organic" style="margin-bottom:6px;">Ayurvedic Agronomy Hub</span>
+        <h2 style="font-size:2rem;margin:0;">Organic Farming Guides & Quality Standards</h2>
+        <p style="color:#6e5e5b;margin:4px 0 0;font-size:0.95rem;">
+          Step-by-step illustrated practices on natural bio-fertilizers, botanical pest sprays, shade dehydration, and Grade A export benchmarks.
+        </p>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div style="display:flex;gap:10px;margin-bottom:28px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="filterGuides('all', this)">All Guides</button>
+        <button class="btn btn-outline btn-sm" onclick="filterGuides('composting', this)">🧪 Jeevamrutha & Composting</button>
+        <button class="btn btn-outline btn-sm" onclick="filterGuides('pest_control', this)">🛡️ 5-Leaf Natural Pest Spray</button>
+        <button class="btn btn-outline btn-sm" onclick="filterGuides('quality_grades', this)">🔬 Quality Grades A/B/C Guide</button>
+        <button class="btn btn-outline btn-sm" onclick="filterGuides('drying_and_storage', this)">☀️ Shade Drying & Storage</button>
+      </div>
+
+      <!-- Guides Container -->
+      <div id="guides-container" style="display:flex;flex-direction:column;gap:34px;">
+        <div style="text-align:center;padding:50px;color:#888;">Loading illustrated guides...</div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    let allTips = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      await loadTips();
+    });
+
+    async function loadTips() {
+      try {
+        const res = await API.get('/tips');
+        if (res.tips) {
+          allTips = res.tips;
+          renderTips(allTips);
+        }
+      } catch (e) {
+        console.warn('Error loading tips:', e);
+      }
+    }
+
+    function filterGuides(category, btnEl) {
+      document.querySelectorAll('.btn-sm').forEach(b => {
+        b.className = 'btn btn-outline btn-sm';
+      });
+      btnEl.className = 'btn btn-primary btn-sm';
+
+      if (category === 'all') {
+        renderTips(allTips);
+      } else {
+        const filtered = allTips.filter(t => t.category === category);
+        renderTips(filtered);
+      }
+    }
+
+    function renderTips(tips) {
+      const container = document.getElementById('guides-container');
+      if (!tips || tips.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">No guides found in this category.</div>';
+        return;
+      }
+
+      container.innerHTML = tips.map(t => `
+        <div class="card" style="padding:32px;border-top:4px solid var(--color-caramel);">
+          <div style="display:grid;grid-template-columns:1fr 280px;gap:30px;align-items:start;" id="guide-header-grid">
+            <div>
+              <span class="badge badge-grade-a" style="margin-bottom:8px;text-transform:uppercase;">
+                ${t.category.replace(/_/g, ' ')}
+              </span>
+              <h3 style="font-size:1.6rem;margin-bottom:8px;color:var(--color-primary);">${t.title}</h3>
+              <div style="font-size:0.85rem;color:#777;margin-bottom:14px;">
+                Authored by: <strong>${t.author}</strong> • 👁️ ${t.views || 0} reads
+              </div>
+              <p style="color:#444;font-size:1rem;line-height:1.65;margin-bottom:18px;">
+                ${t.content}
+              </p>
+            </div>
+            <div>
+              <img src="${t.imageUrl || '/images/placeholder_guide.jpg'}" alt="${t.title}" style="width:100%;height:180px;border-radius:14px;object-fit:cover;box-shadow:var(--shadow-sm);border:2px solid #fff;">
+            </div>
+          </div>
+
+          <!-- Step-by-Step Instructions Grid -->
+          ${t.steps && t.steps.length > 0 ? `
+            <div style="margin-top:20px;border-top:1px solid #f2e7db;padding-top:20px;">
+              <h4 style="font-size:1.15rem;margin-bottom:16px;color:var(--color-primary);">
+                📋 Step-by-Step Practical Protocol:
+              </h4>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;">
+                ${t.steps.map(s => `
+                  <div style="background:#fcf9f5;border:1px solid var(--color-sand);padding:18px;border-radius:12px;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                      <span style="width:28px;height:28px;border-radius:50%;background:var(--color-leaf);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;">
+                        ${s.stepNumber}
+                      </span>
+                      <strong style="font-size:0.95rem;color:var(--color-primary);">${s.title}</strong>
+                    </div>
+                    <p style="font-size:0.88rem;color:#555;line-height:1.55;margin-bottom:10px;">
+                      ${s.description}
+                    </p>
+                    ${s.proTip ? `
+                      <div style="background:#ffffff;border-left:3px solid var(--color-caramel);padding:8px 10px;font-size:0.8rem;color:#784918;border-radius:4px;">
+                        💡 <strong>Pro Tip:</strong> ${s.proTip}
+                      </div>
+                    ` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

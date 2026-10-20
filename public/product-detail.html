@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Details — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container">
+      <div style="margin-bottom:20px;">
+        <a href="/marketplace.html" style="font-size:0.9rem;font-weight:600;">← Back to Marketplace</a>
+      </div>
+
+      <div id="product-detail-container">
+        <div style="text-align:center;padding:60px;color:#888;">Loading product details...</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Buy Request Modal -->
+  <div id="buy-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Send Buy Request to Farmer</h3>
+        <button type="button" class="modal-close-btn" onclick="closeBuyModal()">&times;</button>
+      </div>
+      <form id="buy-order-form">
+        <div class="modal-body">
+          <input type="hidden" id="modal-product-id">
+
+          <div style="background:#faf4ed;padding:14px;border-radius:10px;margin-bottom:18px;">
+            <div style="font-size:1.1rem;font-weight:700;color:var(--color-primary);" id="modal-product-name">Product Name</div>
+            <div style="font-size:0.85rem;color:#777;">
+              Available: <span id="modal-available-qty">500</span> <span id="modal-unit">kg</span> • Asking: ₹<span id="modal-asking-price">95</span>/<span id="modal-unit-2">kg</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Required Quantity *</label>
+              <input type="number" id="modal-order-qty" class="form-control" min="1" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Offered Price / Unit (₹) *</label>
+              <input type="number" id="modal-order-price" class="form-control" min="1" required>
+            </div>
+          </div>
+
+          <!-- Real-time Commission Breakdown Box -->
+          <div class="invoice-box" style="margin-bottom:18px;background:#fdfcf9;">
+            <div style="font-weight:600;font-size:0.85rem;color:var(--color-primary);margin-bottom:8px;text-transform:uppercase;">
+              Invoice Breakdown ( पारदर्शी बिल )
+            </div>
+            <div class="invoice-row">
+              <span>Subtotal (Farmer Receives 100%)</span>
+              <strong id="inv-subtotal">₹0</strong>
+            </div>
+            <div class="invoice-row">
+              <span>
+                Platform Commission (2.5%)
+                <span class="invoice-commission-tag">Buyer Side</span>
+              </span>
+              <span id="inv-commission">₹0</span>
+            </div>
+            <div class="invoice-row total">
+              <span>Total Buyer Payable</span>
+              <span id="inv-total">₹0</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Delivery Destination</label>
+            <input type="text" id="modal-delivery-addr" class="form-control" value="FieldRoot Central Sourcing Warehouse, Plot 14 Herbal Park, Pune 411028">
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Negotiation Note / Specifications</label>
+            <textarea id="modal-order-note" class="form-control" rows="2" placeholder="e.g. Need shade-dried batch with moisture < 10%..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeBuyModal()">Cancel</button>
+          <button type="submit" id="modal-submit-btn" class="btn btn-primary">
+            Send Official Buy Request →
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    let currentProduct = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const prodId = urlParams.get('id');
+
+      if (!prodId) {
+        window.location.href = '/marketplace.html';
+        return;
+      }
+
+      await loadProductDetail(prodId);
+
+      // Invoice calculation on input changes
+      document.getElementById('modal-order-qty').addEventListener('input', calculateInvoice);
+      document.getElementById('modal-order-price').addEventListener('input', calculateInvoice);
+
+      // Buy Form Submission
+      document.getElementById('buy-order-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!Auth.isLoggedIn()) {
+          sessionStorage.setItem('redirect_after_login', window.location.pathname + window.location.search);
+          window.location.href = '/login.html';
+          return;
+        }
+
+        const qty = Number(document.getElementById('modal-order-qty').value);
+        const offeredPrice = Number(document.getElementById('modal-order-price').value);
+        const notes = document.getElementById('modal-order-note').value;
+        const deliveryAddress = document.getElementById('modal-delivery-addr').value;
+
+        const btn = document.getElementById('modal-submit-btn');
+        btn.disabled = true;
+        btn.textContent = 'Sending request...';
+
+        try {
+          const res = await API.post('/orders', {
+            productId: currentProduct._id,
+            quantity: qty,
+            offeredPricePerUnit: offeredPrice,
+            notes,
+            deliveryAddress
+          });
+
+          showToast('Buy request sent to farmer! Redirecting to orders...', 'success');
+          setTimeout(() => {
+            window.location.href = '/orders.html';
+          }, 1000);
+        } catch (err) {
+          showToast(err.message || 'Error placing buy request', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Send Official Buy Request →';
+        }
+      });
+    });
+
+    async function loadProductDetail(prodId) {
+      try {
+        const res = await API.get(`/products/${prodId}`);
+        currentProduct = res.product;
+        const p = res.product;
+        const container = document.getElementById('product-detail-container');
+
+        const mainImg = p.images && p.images[0] ? p.images[0] : '/images/placeholder_herb.jpg';
+
+        container.innerHTML = `
+          <div style="display:grid;grid-template-columns:1fr 1.15fr;gap:40px;align-items:start;">
+            <!-- Left: Images & QR Traceability -->
+            <div>
+              <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
+                <img id="detail-main-img" src="${mainImg}" alt="${p.name}" style="width:100%;height:380px;object-fit:cover;">
+                ${p.images && p.images.length > 1 ? `
+                  <div style="display:flex;gap:10px;padding:14px;background:#fcf8f3;overflow-x:auto;">
+                    ${p.images.map((img, idx) => `
+                      <img src="${img}" style="width:65px;height:65px;border-radius:8px;object-fit:cover;cursor:pointer;border:2px solid ${idx === 0 ? 'var(--color-primary)' : '#ddd'};" onclick="document.getElementById('detail-main-img').src='${img}'">
+                    `).join('')}
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- QR Traceability Box -->
+              <div class="card" style="background:#faf5ee;border:1.5px dashed var(--color-caramel);text-align:center;padding:24px;">
+                <span class="badge badge-grade-a" style="margin-bottom:8px;">★ Verifiable Batch Origin</span>
+                <h4 style="font-size:1.1rem;margin-bottom:12px;">Traceability QR Code</h4>
+                <div style="background:#ffffff;padding:12px;border-radius:12px;display:inline-block;box-shadow:var(--shadow-sm);margin-bottom:12px;">
+                  <img src="${p.qrCodeDataUrl || '/images/placeholder_guide.jpg'}" alt="Batch QR Code" style="width:140px;height:140px;">
+                </div>
+                <div style="font-family:monospace;font-weight:700;font-size:1rem;color:var(--color-primary);margin-bottom:6px;">
+                  ${p.batchNumber}
+                </div>
+                <p style="font-size:0.8rem;color:#777;margin-bottom:14px;">
+                  Can be printed directly on FieldRoot cosmetics retail packaging.
+                </p>
+                <a href="/traceability.html?batch=${p.batchNumber}" target="_blank" class="btn btn-outline btn-sm">
+                  Open Public Traceability Page ↗
+                </a>
+              </div>
+            </div>
+
+            <!-- Right: Product Specifications & Buy Action -->
+            <div>
+              <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                <span class="badge badge-organic">${p.isOrganic ? '🌱 100% Organic' : 'Natural'}</span>
+                <span class="badge badge-grade-a">${p.qualityGrade}</span>
+                <span class="badge" style="background:#f4ece2;color:#6f4e37;text-transform:capitalize;">${p.category}</span>
+              </div>
+
+              <h1 style="font-size:2.2rem;margin-bottom:6px;">${p.name}</h1>
+              ${p.botanicalName ? `<div style="font-size:1.05rem;font-style:italic;color:#6e5e5b;margin-bottom:16px;">${p.botanicalName}</div>` : ''}
+
+              <!-- Price & Stock Box -->
+              <div style="background:#fcf9f5;border:1px solid var(--color-sand);padding:20px;border-radius:14px;margin-bottom:24px;">
+                <div style="display:flex;align-items:baseline;gap:12px;">
+                  <div style="font-size:2.4rem;font-weight:700;color:var(--color-leaf);">
+                    ₹${p.pricePerUnit}
+                  </div>
+                  <div style="font-size:1rem;color:#777;">per ${p.unit}</div>
+                </div>
+                <div style="margin-top:6px;font-size:0.92rem;color:#555;">
+                  Total Available in Godown: <strong style="color:var(--color-primary);">${p.quantity} ${p.unit}</strong>
+                  • Availability: <strong>${p.availabilityPeriod}</strong>
+                </div>
+              </div>
+
+              <!-- Organic Certification / Method -->
+              <div class="card" style="margin-bottom:20px;background:#f6f9f3;border-color:#d4e6cc;padding:18px;">
+                <div style="font-weight:600;color:#2e6930;margin-bottom:4px;font-size:0.9rem;">
+                  🌾 Soil & Farming Method Guarantee
+                </div>
+                <p style="font-size:0.88rem;color:#333;margin:0;">
+                  ${p.organicDetails || 'Subhash Palekar ZBNF cow-based treatment, 100% chemical free.'}
+                </p>
+              </div>
+
+              <!-- Description -->
+              <div style="margin-bottom:28px;">
+                <h4 style="font-size:1.1rem;margin-bottom:8px;">Crop & Quality Details</h4>
+                <p style="color:#555;line-height:1.7;font-size:0.95rem;">
+                  ${p.description || 'High active phytoconstituents ideal for cosmetic formulation.'}
+                </p>
+              </div>
+
+              <!-- Farmer Identity Card -->
+              <div class="card" style="margin-bottom:28px;padding:20px;">
+                <div style="display:flex;align-items:center;gap:16px;">
+                  <div style="width:54px;height:54px;border-radius:50%;background:var(--color-chocolate);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;">
+                    ${p.farmer?.name ? p.farmer.name[0] : 'F'}
+                  </div>
+                  <div>
+                    <h4 style="font-size:1.1rem;margin:0;">${p.farmer?.name || 'Verified Farmer'}</h4>
+                    <p style="color:#777;margin:2px 0;font-size:0.85rem;">
+                      ${p.farmer?.village ? p.farmer.village + ', ' : ''}${p.farmer?.district || ''}, ${p.farmer?.state || ''}
+                    </p>
+                    <div style="display:flex;gap:10px;margin-top:4px;">
+                      <span class="badge badge-trust">★ ${p.farmer?.trustScore || 5.0} Trust Score</span>
+                      <span class="badge badge-verified">✓ KYC Verified</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div style="display:flex;gap:14px;flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary btn-lg" style="flex:1;" onclick="openBuyModal()">
+                  📦 Send Buy Request / Negotiate
+                </button>
+                <a href="/chat.html?contact=${p.farmer?._id}&product=${p._id}" class="btn btn-outline btn-lg">
+                  💬 Chat with Farmer
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        document.getElementById('product-detail-container').innerHTML =
+          `<div style="text-align:center;padding:50px;color:red;">Error loading product: ${err.message}</div>`;
+      }
+    }
+
+    function openBuyModal() {
+      if (!currentProduct) return;
+      document.getElementById('modal-product-id').value = currentProduct._id;
+      document.getElementById('modal-product-name').textContent = currentProduct.name;
+      document.getElementById('modal-available-qty').textContent = currentProduct.quantity;
+      document.getElementById('modal-unit').textContent = currentProduct.unit;
+      document.getElementById('modal-unit-2').textContent = currentProduct.unit;
+      document.getElementById('modal-asking-price').textContent = currentProduct.pricePerUnit;
+      document.getElementById('modal-order-qty').value = currentProduct.quantity;
+      document.getElementById('modal-order-price').value = currentProduct.pricePerUnit;
+
+      calculateInvoice();
+      document.getElementById('buy-modal').classList.add('show');
+    }
+
+    function closeBuyModal() {
+      document.getElementById('buy-modal').classList.remove('show');
+    }
+
+    function calculateInvoice() {
+      const qty = Number(document.getElementById('modal-order-qty').value) || 0;
+      const price = Number(document.getElementById('modal-order-price').value) || 0;
+      const subtotal = qty * price;
+      const commission = (subtotal * 2.5) / 100;
+      const total = subtotal + commission;
+
+      document.getElementById('inv-subtotal').textContent = `₹${subtotal.toLocaleString('en-IN')}`;
+      document.getElementById('inv-commission').textContent = `₹${commission.toLocaleString('en-IN')}`;
+      document.getElementById('inv-total').textContent = `₹${total.toLocaleString('en-IN')}`;
+    }
+  </script>
+</body>
+</html>

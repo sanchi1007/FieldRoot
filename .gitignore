@@ -1,0 +1,7 @@
+node_modules/
+.env
+uploads/herb-*.jpg
+uploads/herb-*.png
+uploads/herb-*.webp
+.DS_Store
+*.log

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Community Q&A — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:16px;">
+        <div>
+          <span class="badge badge-organic" style="margin-bottom:6px;">Peer-to-Peer Farmer Network</span>
+          <h2 style="font-size:2rem;margin:0;">Farmer Community Q&A Choupal</h2>
+          <p style="color:#6e5e5b;margin:4px 0 0;font-size:0.95rem;">
+            Ask questions, share traditional organic farming techniques, and get verified advice from FieldRoot agronomists.
+          </p>
+        </div>
+
+        <button class="btn btn-primary" onclick="openAskModal()">
+          ✍️ Ask a Question
+        </button>
+      </div>
+
+      <!-- Search & Category Filters -->
+      <div class="card" style="padding:18px 24px;margin-bottom:28px;">
+        <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:14px;align-items:center;">
+          <input type="text" id="comm-search" class="form-control" placeholder="Search questions about Hibiscus, drying, pests, compost...">
+
+          <select id="comm-category" class="form-control">
+            <option value="all">All Discussion Categories</option>
+            <option value="Crops & Sowing">Crops & Sowing</option>
+            <option value="Organic Pest Solutions">Organic Pest Solutions</option>
+            <option value="Harvesting & Drying">Harvesting & Drying</option>
+            <option value="Mandi & Pricing">Mandi & Pricing</option>
+            <option value="General">General</option>
+          </select>
+
+          <button id="comm-filter-btn" class="btn btn-primary">Filter</button>
+        </div>
+      </div>
+
+      <!-- Questions List Container -->
+      <div id="questions-list-container" style="display:flex;flex-direction:column;gap:20px;">
+        <div style="text-align:center;padding:50px;color:#888;">Loading community discussions...</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Ask Question Modal -->
+  <div id="ask-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Ask Farmer Community & Agronomists</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('ask-modal')">&times;</button>
+      </div>
+      <form id="ask-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <label class="form-label" style="margin:0;">Question Title (संक्षिप्त प्रश्न) *</label>
+              <button type="button" class="btn-voice" id="voice-q-title-btn" title="Speak title">🎙️ Speak Title</button>
+            </div>
+            <input type="text" id="ask-title" class="form-control" placeholder="e.g. How to prevent mold on shade-dried Hibiscus in winter?" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select id="ask-category" class="form-control">
+                <option value="Crops & Sowing">Crops & Sowing</option>
+                <option value="Organic Pest Solutions">Organic Pest Solutions</option>
+                <option value="Harvesting & Drying" selected>Harvesting & Drying</option>
+                <option value="Mandi & Pricing">Mandi & Pricing</option>
+                <option value="General">General</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Related Crop (Optional)</label>
+              <input type="text" id="ask-crop" class="form-control" placeholder="e.g. Hibiscus / Reetha">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <label class="form-label" style="margin:0;">Detailed Description *</label>
+              <button type="button" class="btn-voice" id="voice-q-desc-btn" title="Speak details">🎙️ Speak Details</button>
+            </div>
+            <textarea id="ask-content" class="form-control" rows="4" placeholder="Explain your farming situation, soil conditions, and what solutions you have already tried..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('ask-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Post Question →</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/voice.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      await loadQuestions();
+
+      // Voice Input attachments
+      VoiceInput.attach('ask-title', 'voice-q-title-btn');
+      VoiceInput.attach('ask-content', 'voice-q-desc-btn');
+
+      document.getElementById('comm-filter-btn').addEventListener('click', loadQuestions);
+      document.getElementById('comm-category').addEventListener('change', loadQuestions);
+      document.getElementById('comm-search').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') loadQuestions();
+      });
+
+      // Form submission
+      document.getElementById('ask-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!Auth.isLoggedIn()) {
+          sessionStorage.setItem('redirect_after_login', '/community.html');
+          window.location.href = '/login.html';
+          return;
+        }
+
+        const title = document.getElementById('ask-title').value.trim();
+        const category = document.getElementById('ask-category').value;
+        const cropName = document.getElementById('ask-crop').value.trim();
+        const content = document.getElementById('ask-content').value.trim();
+
+        try {
+          await API.post('/community', { title, category, cropName, content });
+          showToast('Question posted to community!', 'success');
+          closeModal('ask-modal');
+          document.getElementById('ask-title').value = '';
+          document.getElementById('ask-content').value = '';
+          await loadQuestions();
+        } catch (err) {
+          showToast(err.message || 'Error posting question', 'error');
+        }
+      });
+    });
+
+    async function loadQuestions() {
+      const search = document.getElementById('comm-search').value.trim();
+      const category = document.getElementById('comm-category').value;
+      const params = {};
+      if (search) params.search = search;
+      if (category && category !== 'all') params.category = category;
+
+      const container = document.getElementById('questions-list-container');
+      container.innerHTML = '<div style="text-align:center;padding:50px;color:#888;">Loading discussions...</div>';
+
+      try {
+        const res = await API.get('/community', params);
+
+        if (!res.questions || res.questions.length === 0) {
+          container.innerHTML = `
+            <div class="card" style="text-align:center;padding:50px 20px;">
+              <div style="font-size:48px;margin-bottom:10px;">💬</div>
+              <h3>No Questions Found</h3>
+              <p style="color:#777;margin-bottom:16px;">Be the first to start a conversation in this category!</p>
+              <button class="btn btn-primary" onclick="openAskModal()">✍️ Ask a Question</button>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = res.questions.map(q => `
+          <div class="card" style="padding:24px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:10px;">
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="badge" style="background:#f5ece2;color:#6f4e37;">${q.category}</span>
+                ${q.cropName ? `<span class="badge badge-grade-a">🌿 ${q.cropName}</span>` : ''}
+              </div>
+              <span style="font-size:0.8rem;color:#888;">
+                ${new Date(q.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            </div>
+
+            <h3 style="font-size:1.25rem;margin-bottom:8px;color:var(--color-primary);">${q.title}</h3>
+            <p style="color:#444;font-size:0.92rem;line-height:1.6;margin-bottom:14px;">${q.content}</p>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #f2e7db;padding-top:12px;flex-wrap:wrap;gap:10px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:30px;height:30px;border-radius:50%;background:#e0d2c3;color:#4a2c2a;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;">
+                  ${q.author?.name ? q.author.name[0] : 'F'}
+                </div>
+                <span style="font-size:0.85rem;color:#666;">
+                  Asked by <strong>${q.author?.name || 'Farmer'}</strong> (${q.author?.village || q.author?.state || 'India'})
+                </span>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:12px;">
+                <button class="btn btn-outline btn-sm" onclick="upvoteQuestion('${q._id}', this)">
+                  👍 ${q.upvotes?.length || 0} Upvotes
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="toggleAnswers('${q._id}')">
+                  💬 ${q.answers?.length || 0} Answers ▾
+                </button>
+              </div>
+            </div>
+
+            <!-- Answers Accordion Section -->
+            <div id="answers-box-${q._id}" style="display:none;margin-top:16px;border-top:1px dashed var(--color-sand);padding-top:16px;">
+              <h4 style="font-size:1rem;color:var(--color-primary);margin-bottom:12px;">Answers & Advice:</h4>
+
+              <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+                ${q.answers && q.answers.length > 0 ? q.answers.map(ans => `
+                  <div style="background:#fcf9f5;border:1px solid var(--color-sand);padding:14px;border-radius:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                      <div style="display:flex;align-items:center;gap:8px;">
+                        <strong>${ans.authorName}</strong>
+                        ${ans.isExpertAnswer ? '<span class="badge badge-grade-a">✓ Verified FieldRoot Agronomist</span>' : '<span class="badge badge-organic">Farmer Peer</span>'}
+                      </div>
+                      <span style="font-size:0.75rem;color:#888;">
+                        ${new Date(ans.createdAt || Date.now()).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                    <p style="font-size:0.9rem;color:#444;margin:0;line-height:1.5;">${ans.content}</p>
+                  </div>
+                `).join('') : '<div style="color:#888;font-size:0.85rem;">No answers yet. Share your experience!</div>'}
+              </div>
+
+              <!-- Post Answer Input -->
+              <div style="display:flex;gap:10px;">
+                <input type="text" id="answer-input-${q._id}" class="form-control" placeholder="Write your practical solution or reply...">
+                <button class="btn btn-primary btn-sm" onclick="submitAnswer('${q._id}')">Post Answer</button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = `<div style="text-align:center;padding:40px;color:red;">Error: ${err.message}</div>`;
+      }
+    }
+
+    function toggleAnswers(questionId) {
+      const box = document.getElementById(`answers-box-${questionId}`);
+      if (box) {
+        box.style.display = box.style.display === 'none' ? 'block' : 'none';
+      }
+    }
+
+    async function submitAnswer(questionId) {
+      if (!Auth.isLoggedIn()) {
+        sessionStorage.setItem('redirect_after_login', '/community.html');
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const input = document.getElementById(`answer-input-${questionId}`);
+      const content = input.value.trim();
+      if (!content) return;
+
+      try {
+        await API.post(`/community/${questionId}/answer`, { content });
+        showToast('Answer posted!', 'success');
+        await loadQuestions();
+        toggleAnswers(questionId);
+      } catch (err) {
+        showToast(err.message || 'Error posting answer', 'error');
+      }
+    }
+
+    async function upvoteQuestion(questionId, btn) {
+      if (!Auth.isLoggedIn()) {
+        window.location.href = '/login.html';
+        return;
+      }
+      try {
+        const res = await API.post(`/community/${questionId}/upvote`, {});
+        btn.innerHTML = `👍 ${res.upvotesCount} Upvotes`;
+      } catch (err) {
+        showToast(err.message || 'Error upvoting', 'error');
+      }
+    }
+
+    function openAskModal() {
+      document.getElementById('ask-modal').classList.add('show');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('show');
+    }
+  </script>
+</body>
+</html>

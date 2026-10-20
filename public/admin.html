@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Management Panel — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:16px;">
+        <div>
+          <span class="badge badge-grade-a" style="margin-bottom:6px;">FieldRoot Governance</span>
+          <h2 style="font-size:2rem;margin:0;">Platform Administration Panel</h2>
+          <p style="color:#6e5e5b;margin:4px 0 0;font-size:0.95rem;">
+            Verify farmer accounts, moderate organic harvest listings, and configure platform commissions.
+          </p>
+        </div>
+
+        <!-- Commission Config Pill -->
+        <div class="card" style="padding:12px 18px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:0.88rem;color:#555;">Current Commission:</span>
+          <strong id="display-comm-rate" style="font-size:1.1rem;color:var(--color-primary);">2.5%</strong>
+          <button class="btn btn-outline btn-sm" onclick="promptUpdateCommission()">Adjust %</button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="stats-grid" style="margin-top:0;margin-bottom:30px;">
+        <div class="stat-card">
+          <div id="adm-farmers-count" class="stat-number">0</div>
+          <div class="stat-label">Registered Farmers</div>
+        </div>
+        <div class="stat-card">
+          <div id="adm-verified-count" class="stat-number" style="color:var(--color-leaf);">0</div>
+          <div class="stat-label">Verified KYC Growers</div>
+        </div>
+        <div class="stat-card">
+          <div id="adm-gmv" class="stat-number" style="color:var(--color-chocolate);">₹0</div>
+          <div class="stat-label">Platform GMV Traded</div>
+        </div>
+        <div class="stat-card">
+          <div id="adm-commission-earned" class="stat-number" style="color:var(--color-caramel);">₹0</div>
+          <div class="stat-label">Platform Commission</div>
+        </div>
+      </div>
+
+      <!-- Tabs: Verify Farmers vs Moderate Products vs Master Ingredients -->
+      <div style="display:flex;gap:10px;margin-bottom:24px;">
+        <button id="adm-tab-farmers" class="btn btn-primary btn-sm" onclick="switchAdminTab('farmers')">
+          👨🏽‍🌾 Farmers Verification
+        </button>
+        <button id="adm-tab-products" class="btn btn-outline btn-sm" onclick="switchAdminTab('products')">
+          🌿 Products Moderation
+        </button>
+        <button id="adm-tab-ingredients" class="btn btn-outline btn-sm" onclick="switchAdminTab('ingredients')">
+          🧪 Master Ingredients (30+)
+        </button>
+      </div>
+
+      <!-- Tab Content Area -->
+      <div id="admin-tab-content">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    let currentAdminTab = 'farmers';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      if (!Auth.requireAuth(['admin'])) return;
+
+      await loadAdminStats();
+      await switchAdminTab('farmers');
+    });
+
+    async function loadAdminStats() {
+      try {
+        const res = await API.get('/admin/stats');
+        if (res.stats) {
+          document.getElementById('adm-farmers-count').textContent = res.stats.totalFarmers;
+          document.getElementById('adm-verified-count').textContent = res.stats.verifiedFarmers;
+          document.getElementById('adm-gmv').textContent = `₹${res.stats.grossMerchandiseValue.toLocaleString('en-IN')}`;
+          document.getElementById('adm-commission-earned').textContent = `₹${res.stats.platformCommissionEarned.toLocaleString('en-IN')}`;
+          document.getElementById('display-comm-rate').textContent = `${res.stats.currentCommissionRate}%`;
+        }
+      } catch (err) {
+        console.warn('Stats error:', err);
+      }
+    }
+
+    async function promptUpdateCommission() {
+      const newRate = prompt('Enter new platform commission percentage (e.g. 2.5):', '2.5');
+      if (newRate === null || isNaN(newRate)) return;
+
+      try {
+        await API.patch('/admin/commission', { commissionPercent: Number(newRate) });
+        showToast(`Commission updated to ${newRate}%`, 'success');
+        document.getElementById('display-comm-rate').textContent = `${newRate}%`;
+      } catch (err) {
+        showToast(err.message || 'Error updating commission', 'error');
+      }
+    }
+
+    async function switchAdminTab(tab) {
+      currentAdminTab = tab;
+      ['farmers', 'products', 'ingredients'].forEach(t => {
+        const btn = document.getElementById(`adm-tab-${t}`);
+        if (t === tab) btn.className = 'btn btn-primary btn-sm';
+        else btn.className = 'btn btn-outline btn-sm';
+      });
+
+      const content = document.getElementById('admin-tab-content');
+      content.innerHTML = '<div style="text-align:center;padding:50px;color:#888;">Loading records...</div>';
+
+      if (tab === 'farmers') {
+        await loadFarmersTable(content);
+      } else if (tab === 'products') {
+        await loadProductsModeration(content);
+      } else if (tab === 'ingredients') {
+        await loadMasterIngredients(content);
+      }
+    }
+
+    async function loadFarmersTable(container) {
+      try {
+        const res = await API.get('/admin/farmers');
+        if (!res.farmers || res.farmers.length === 0) {
+          container.innerHTML = '<div class="card" style="text-align:center;padding:40px;">No registered farmers.</div>';
+          return;
+        }
+
+        container.innerHTML = `
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Farmer Name</th>
+                    <th>Phone</th>
+                    <th>Location</th>
+                    <th>Farm Size & Soil</th>
+                    <th>Trust Score</th>
+                    <th>Verification</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${res.farmers.map(f => `
+                    <tr>
+                      <td>
+                        <strong>${f.name}</strong>
+                        <div style="font-size:0.75rem;color:#888;">Preferred: ${f.preferredLanguage.toUpperCase()}</div>
+                      </td>
+                      <td><code>${f.phone}</code></td>
+                      <td>${f.village ? f.village + ', ' : ''}${f.district}, ${f.state}</td>
+                      <td>${f.farmSize} Acres • ${f.soilType}</td>
+                      <td><span class="badge badge-trust">★ ${f.trustScore || 5.0}</span></td>
+                      <td>
+                        <span class="badge ${f.isVerified ? 'badge-verified' : 'badge-grade-b'}">
+                          ${f.isVerified ? '✓ Verified' : 'Pending'}
+                        </span>
+                      </td>
+                      <td>
+                        <button class="btn btn-sm ${f.isVerified ? 'btn-outline' : 'btn-primary'}" onclick="toggleFarmerVerify('${f._id}')">
+                          ${f.isVerified ? 'Revoke' : 'Verify Farmer'}
+                        </button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        container.innerHTML = `<div style="color:red;padding:30px;">Error: ${err.message}</div>`;
+      }
+    }
+
+    async function toggleFarmerVerify(farmerId) {
+      try {
+        const res = await API.patch(`/admin/farmers/${farmerId}/verify`, {});
+        showToast(res.message, 'success');
+        await loadAdminStats();
+        await switchAdminTab('farmers');
+      } catch (err) {
+        showToast(err.message || 'Error updating verification', 'error');
+      }
+    }
+
+    async function loadProductsModeration(container) {
+      try {
+        const res = await API.get('/products?status=all');
+        container.innerHTML = `
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Harvest Listing</th>
+                    <th>Farmer</th>
+                    <th>Price / Qty</th>
+                    <th>Batch</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${res.products.map(p => `
+                    <tr>
+                      <td>
+                        <strong><a href="/product-detail.html?id=${p._id}">${p.name}</a></strong>
+                        <div style="font-size:0.75rem;color:#888;">${p.category} • ${p.qualityGrade}</div>
+                      </td>
+                      <td>${p.farmer?.name || 'Farmer'}</td>
+                      <td>₹${p.pricePerUnit}/${p.unit} • ${p.quantity} ${p.unit}</td>
+                      <td><code>${p.batchNumber}</code></td>
+                      <td><span class="badge badge-status badge-status-${p.status}">${p.status}</span></td>
+                      <td>
+                        <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;" onclick="adminDeleteProd('${p._id}', '${p.name}')">
+                          🗑️ Remove
+                        </button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        container.innerHTML = `<div style="color:red;padding:30px;">Error: ${err.message}</div>`;
+      }
+    }
+
+    async function adminDeleteProd(prodId, prodName) {
+      if (!confirm(`Remove listing "${prodName}" from platform?`)) return;
+      try {
+        await API.delete(`/admin/products/${prodId}`);
+        showToast('Listing removed by moderation', 'success');
+        await switchAdminTab('products');
+      } catch (err) {
+        showToast(err.message || 'Error removing listing', 'error');
+      }
+    }
+
+    async function loadMasterIngredients(container) {
+      try {
+        const res = await API.get('/admin/ingredients');
+        container.innerHTML = `
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Ingredient</th>
+                    <th>Category</th>
+                    <th>Botanical Name</th>
+                    <th>Soil Types</th>
+                    <th>Profit / Acre</th>
+                    <th>Typical Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${res.ingredients.map(i => `
+                    <tr>
+                      <td>
+                        <strong>${i.name}</strong>
+                        <div style="font-size:0.75rem;color:#777;">${i.hindiName || ''}</div>
+                      </td>
+                      <td><span class="badge badge-grade-a">${i.category}</span></td>
+                      <td><em>${i.botanicalName}</em></td>
+                      <td>${i.soilTypes.join(', ')}</td>
+                      <td><strong style="color:var(--color-leaf);">₹${i.expectedProfitPerAcre.toLocaleString('en-IN')}</strong></td>
+                      <td>₹${i.typicalPriceRange.min} - ₹${i.typicalPriceRange.max} / ${i.typicalPriceRange.unit}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        container.innerHTML = `<div style="color:red;padding:30px;">Error: ${err.message}</div>`;
+      }
+    }
+  </script>
+</body>
+</html>

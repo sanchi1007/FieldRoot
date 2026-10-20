@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Products — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:16px;">
+        <div>
+          <span class="badge badge-organic" style="margin-bottom:6px;">Farmer Inventory Management</span>
+          <h2 style="font-size:1.8rem;margin:0;">My Harvest Listings</h2>
+          <p style="color:#6e5e5b;margin:4px 0 0;font-size:0.92rem;">
+            Monitor buyer view counts, inquiry volume, and update availability status.
+          </p>
+        </div>
+        <a href="/add-product.html" class="btn btn-primary btn-lg">+ Add New Harvest Listing</a>
+      </div>
+
+      <!-- Inventory Analytics KPI Cards -->
+      <div class="stats-grid" style="margin-top:0;margin-bottom:30px;">
+        <div class="stat-card">
+          <div id="stat-total-listings" class="stat-number">0</div>
+          <div class="stat-label">Total Listings</div>
+        </div>
+        <div class="stat-card">
+          <div id="stat-active-listings" class="stat-number" style="color:var(--color-leaf);">0</div>
+          <div class="stat-label">Active / Available</div>
+        </div>
+        <div class="stat-card">
+          <div id="stat-total-views" class="stat-number" style="color:var(--color-chocolate);">0</div>
+          <div class="stat-label">Buyer Profile Views</div>
+        </div>
+        <div class="stat-card">
+          <div id="stat-total-inquiries" class="stat-number" style="color:var(--color-caramel);">0</div>
+          <div class="stat-label">Buy Requests Received</div>
+        </div>
+      </div>
+
+      <!-- Listings Table / Grid -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Product & Crop</th>
+                <th>Category</th>
+                <th>Quantity</th>
+                <th>Price / Unit</th>
+                <th>Batch & Traceability</th>
+                <th>Engagement</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="my-products-tbody">
+              <tr>
+                <td colspan="8" style="text-align:center;padding:40px;color:#888;">
+                  Loading your product listings...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      if (!Auth.requireAuth(['farmer', 'admin'])) return;
+
+      await loadMyProducts();
+    });
+
+    async function loadMyProducts() {
+      try {
+        const res = await API.get('/products/my');
+        const tbody = document.getElementById('my-products-tbody');
+
+        if (res.analytics) {
+          document.getElementById('stat-total-listings').textContent = res.analytics.totalListings;
+          document.getElementById('stat-active-listings').textContent = res.analytics.activeListings;
+          document.getElementById('stat-total-views').textContent = res.analytics.totalViews;
+          document.getElementById('stat-total-inquiries').textContent = res.analytics.totalInquiries;
+        }
+
+        if (!res.products || res.products.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="8" style="text-align:center;padding:50px;">
+                <div style="font-size:48px;margin-bottom:10px;">🌾</div>
+                <h3>No Harvests Listed Yet</h3>
+                <p style="color:#777;margin-bottom:16px;">List your raw organic herbs to connect directly with FieldRoot buyers.</p>
+                <a href="/add-product.html" class="btn btn-primary">+ List First Harvest</a>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = res.products.map(p => `
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:12px;">
+                <img src="${p.images && p.images[0] ? p.images[0] : '/images/placeholder_herb.jpg'}" alt="${p.name}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;border:1px solid #ddd;">
+                <div>
+                  <strong><a href="/product-detail.html?id=${p._id}" style="color:var(--color-primary);">${p.name}</a></strong>
+                  <div style="font-size:0.78rem;color:#777;">${p.qualityGrade ? p.qualityGrade.split(' ')[0] : 'Grade A'} • ${p.isOrganic ? '🌱 Organic' : 'Natural'}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge" style="background:#f4ece2;color:#6f4e37;text-transform:capitalize;">${p.category}</span></td>
+            <td><strong>${p.quantity}</strong> ${p.unit}</td>
+            <td><strong style="color:var(--color-leaf);">₹${p.pricePerUnit}</strong> / ${p.unit}</td>
+            <td>
+              <a href="/traceability.html?batch=${p.batchNumber}" target="_blank" class="badge badge-grade-a" style="font-family:monospace;cursor:pointer;" title="View QR Page">
+                ${p.batchNumber} ↗
+              </a>
+            </td>
+            <td>
+              <div style="font-size:0.85rem;">
+                👁️ ${p.views || 0} views<br>
+                📩 ${p.inquiriesCount || 0} inquiries
+              </div>
+            </td>
+            <td>
+              <span class="badge ${p.status === 'available' ? 'badge-organic' : 'badge-grade-b'}">
+                ${p.status === 'available' ? '✓ Available' : 'Sold Out'}
+              </span>
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="btn btn-outline btn-sm" onclick="toggleStatus('${p._id}', '${p.status}')" title="Toggle Available / Sold Out">
+                  ${p.status === 'available' ? 'Mark Sold' : 'Reactivate'}
+                </button>
+                <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;" onclick="deleteProduct('${p._id}', '${p.name}')" title="Delete listing">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        showToast(err.message || 'Error loading listings', 'error');
+      }
+    }
+
+    async function toggleStatus(productId, currentStatus) {
+      const nextStatus = currentStatus === 'available' ? 'sold_out' : 'available';
+      try {
+        await API.patch(`/products/${productId}/status`, { status: nextStatus });
+        showToast(`Listing marked as ${nextStatus}`, 'success');
+        await loadMyProducts();
+      } catch (err) {
+        showToast(err.message || 'Error updating status', 'error');
+      }
+    }
+
+    async function deleteProduct(productId, productName) {
+      if (!confirm(`Are you sure you want to delete listing "${productName}"?`)) return;
+      try {
+        await API.delete(`/products/${productId}`);
+        showToast('Listing removed successfully', 'success');
+        await loadMyProducts();
+      } catch (err) {
+        showToast(err.message || 'Error deleting product', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

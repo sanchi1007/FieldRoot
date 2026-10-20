@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Product Harvest — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container container-narrow">
+      <div class="card" style="padding:36px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;border-bottom:1px solid var(--color-sand);padding-bottom:18px;">
+          <div>
+            <span class="badge badge-organic" style="margin-bottom:6px;">🌿 Farmer Direct Listing</span>
+            <h2 style="font-size:1.8rem;margin:0;">List Your Organic Harvest</h2>
+            <p style="color:#6e5e5b;font-size:0.92rem;margin:4px 0 0;">
+              Enter details below. Your product will be visible immediately to FieldRoot and certified cosmetic buyers.
+            </p>
+          </div>
+          <a href="/my-products.html" class="btn btn-outline btn-sm">My Listings →</a>
+        </div>
+
+        <form id="add-product-form" enctype="multipart/form-data">
+          <!-- Step 1: Herb Name (Searchable Select or Custom) -->
+          <div class="form-group">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <label class="form-label" style="margin:0;">Select Botanical Crop (फसल चुनें) *</label>
+              <button type="button" class="btn-voice" id="voice-crop-btn" title="Speak crop name">
+                🎙️ Speak Crop Name
+              </button>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;">
+              <div>
+                <select id="prod-select-name" class="form-control">
+                  <option value="">-- Choose from 30+ Ayurvedic Herbs --</option>
+                  <!-- Populated dynamically from /api/products/ingredients-list -->
+                </select>
+                <div class="form-hint">Standardized cosmetic herb</div>
+              </div>
+
+              <div style="font-weight:600;color:#999;text-align:center;">OR</div>
+
+              <div>
+                <input type="text" id="prod-custom-name" class="form-control" placeholder="Type custom crop / herb name">
+                <div class="form-hint">Type if your herb is not in list</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Botanical / Scientific Name (Optional)</label>
+              <input type="text" id="prod-botanical" class="form-control" placeholder="e.g. Sapindus mukorossi">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Cosmetic Category (श्रेणी) *</label>
+              <select id="prod-category" class="form-control" required>
+                <option value="hair care">Hair Care (केश देखभाल)</option>
+                <option value="skin care">Skin Care (त्वचा देखभाल)</option>
+                <option value="health and wellness">Health and Wellness (स्वास्थ्य व पोषण)</option>
+                <option value="oils">Aromatic & Medicinal Oils (तेल)</option>
+                <option value="flowers">Botanical Flowers (पुष्प)</option>
+                <option value="herbs">Raw Medicinal Herbs (जड़ी-बूटी)</option>
+                <option value="other">Other Herbal Harvest</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Quantity, Unit, Price -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Harvest Quantity (मात्रा) *</label>
+              <input type="number" id="prod-quantity" class="form-control" placeholder="e.g. 500" min="1" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Unit of Measure *</label>
+              <select id="prod-unit" class="form-control" required>
+                <option value="kg" selected>Kilogram (kg)</option>
+                <option value="quintal">Quintal (100 kg)</option>
+                <option value="litre">Litre (तेल / रस)</option>
+                <option value="grams">Grams</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Expected Price Per Unit (₹) *</label>
+              <input type="number" id="prod-price" class="form-control" placeholder="e.g. 95" min="1" required>
+              <div id="mandi-price-hint" class="form-hint" style="color:var(--color-leaf);font-weight:500;"></div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Harvest Date (कटाई की तारीख) *</label>
+              <input type="date" id="prod-harvest-date" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Availability Period (उपलब्धता)</label>
+              <select id="prod-availability" class="form-control">
+                <option value="Immediate Stock (Sun-Dried)" selected>Immediate Stock (Ready in Godown)</option>
+                <option value="Ready in 7-10 Days">Ready in 7-10 Days (Currently Shade-Drying)</option>
+                <option value="Harvest on Order (Fresh)">Harvest on Order (Fresh Leaves / Fillets)</option>
+                <option value="Monthly Ongoing Harvest">Monthly Ongoing Harvest</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Quality Grade Self-Assessment</label>
+              <select id="prod-grade" class="form-control">
+                <option value="Grade A (Export / Prime)" selected>Grade A (Export / Prime - Highest Price)</option>
+                <option value="Grade B (Standard Commercial)">Grade B (Standard Commercial Formulation)</option>
+                <option value="Grade C (Industrial)">Grade C (Industrial Formulation)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Organic Status & Details -->
+          <div class="form-group" style="background:#f7f2ea;padding:16px 20px;border-radius:12px;border:1px solid var(--color-sand);">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+              <input type="checkbox" id="prod-is-organic" style="width:20px;height:20px;accent-color:var(--color-leaf);" checked>
+              <label for="prod-is-organic" style="font-weight:600;color:var(--color-primary);cursor:pointer;margin:0;">
+                🌱 Grown Using Natural / Organic Methods (Pesticide Free)
+              </label>
+            </div>
+            <input type="text" id="prod-organic-details" class="form-control" placeholder="e.g. Subhash Palekar ZBNF certified, treated only with Desi Cow Jeevamrutha and Neem-astra" value="Traditional cow-dung compost and Jeevamrutha treated (Chemical-Free)">
+          </div>
+
+          <!-- Description with Voice Input -->
+          <div class="form-group">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <label class="form-label" style="margin:0;">Crop Description & Processing Method</label>
+              <button type="button" class="btn-voice" id="voice-desc-btn" title="Speak description">
+                🎙️ Speak Description
+              </button>
+            </div>
+            <textarea id="prod-desc" class="form-control" rows="3" placeholder="Describe quality, drying method (e.g. shade-dried, destoned, cleaned whole shells), moisture level, aroma..."></textarea>
+          </div>
+
+          <!-- Photos Upload (1-4 Photos) -->
+          <div class="form-group">
+            <label class="form-label">Product Photos (1 to 4 Images) *</label>
+            <input type="file" id="prod-photos" class="form-control" accept="image/*" multiple>
+            <div class="form-hint">Upload photos of your raw herb, drying setup, or packaging. Clean photos receive 3x more buyer inquiries.</div>
+          </div>
+
+          <div style="display:flex;gap:14px;margin-top:24px;">
+            <button type="submit" id="add-prod-submit-btn" class="btn btn-primary btn-lg" style="flex:1;">
+              🌿 List Product Harvest & Generate QR Code →
+            </button>
+            <a href="/my-products.html" class="btn btn-outline btn-lg">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/voice.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    let masterIngredients = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      if (!Auth.requireAuth(['farmer', 'admin'])) return;
+
+      // Set default harvest date to today
+      document.getElementById('prod-harvest-date').value = new Date().toISOString().split('T')[0];
+
+      // Voice Input attachments
+      VoiceInput.attach('prod-custom-name', 'voice-crop-btn');
+      VoiceInput.attach('prod-desc', 'voice-desc-btn');
+
+      // Load 30+ Ingredients from master list
+      try {
+        const res = await API.get('/products/ingredients-list');
+        if (res.ingredients) {
+          masterIngredients = res.ingredients;
+          const select = document.getElementById('prod-select-name');
+          res.ingredients.forEach(i => {
+            const opt = document.createElement('option');
+            opt.value = i.name;
+            opt.textContent = `${i.name} — ${i.hindiName || ''} (${i.category})`;
+            select.appendChild(opt);
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to load ingredients list:', e);
+      }
+
+      // Auto-fill category, botanical name & recommended price when an ingredient is chosen
+      document.getElementById('prod-select-name').addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (!val) return;
+        document.getElementById('prod-custom-name').value = '';
+        const matched = masterIngredients.find(i => i.name.toLowerCase() === val.toLowerCase());
+        if (matched) {
+          if (matched.category) document.getElementById('prod-category').value = matched.category;
+          if (matched.botanicalName) document.getElementById('prod-botanical').value = matched.botanicalName;
+          if (matched.typicalPriceRange) {
+            document.getElementById('prod-price').value = matched.typicalPriceRange.min + Math.round((matched.typicalPriceRange.max - matched.typicalPriceRange.min) / 2);
+            document.getElementById('mandi-price-hint').textContent =
+              `★ FieldRoot standard fair price: ₹${matched.typicalPriceRange.min} - ₹${matched.typicalPriceRange.max} / ${matched.typicalPriceRange.unit}`;
+          }
+          if (matched.description) {
+            document.getElementById('prod-desc').value = matched.description;
+          }
+        }
+      });
+
+      // Form submission
+      const form = document.getElementById('add-product-form');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const selectedName = document.getElementById('prod-select-name').value;
+        const customName = document.getElementById('prod-custom-name').value.trim();
+        const finalName = customName || selectedName;
+
+        if (!finalName) {
+          showToast('Please select a crop or type a custom crop name.', 'error');
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('name', finalName);
+        formData.append('botanicalName', document.getElementById('prod-botanical').value.trim());
+        formData.append('category', document.getElementById('prod-category').value);
+        formData.append('quantity', document.getElementById('prod-quantity').value);
+        formData.append('unit', document.getElementById('prod-unit').value);
+        formData.append('pricePerUnit', document.getElementById('prod-price').value);
+        formData.append('harvestDate', document.getElementById('prod-harvest-date').value);
+        formData.append('availabilityPeriod', document.getElementById('prod-availability').value);
+        formData.append('qualityGrade', document.getElementById('prod-grade').value);
+        formData.append('isOrganic', document.getElementById('prod-is-organic').checked);
+        formData.append('organicDetails', document.getElementById('prod-organic-details').value.trim());
+        formData.append('description', document.getElementById('prod-desc').value.trim());
+
+        const photoInput = document.getElementById('prod-photos');
+        if (photoInput.files.length > 0) {
+          for (let i = 0; i < Math.min(photoInput.files.length, 4); i++) {
+            formData.append('photos', photoInput.files[i]);
+          }
+        }
+
+        const btn = document.getElementById('add-prod-submit-btn');
+        btn.disabled = true;
+        btn.textContent = 'Listing product & generating QR code...';
+
+        try {
+          const res = await API.post('/products', formData);
+          showToast('Product harvest listed successfully! QR code generated.', 'success');
+          setTimeout(() => {
+            window.location.href = `/product-detail.html?id=${res.product._id}`;
+          }, 1000);
+        } catch (err) {
+          showToast(err.message || 'Error listing product', 'error');
+          btn.disabled = false;
+          btn.textContent = '🌿 List Product Harvest & Generate QR Code →';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

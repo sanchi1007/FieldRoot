@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather & Sowing Calendar — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container">
+      <div style="margin-bottom:28px;">
+        <span class="badge badge-grade-a" style="margin-bottom:6px;">Agro-Meteorology & Sowing Timetable</span>
+        <h2 style="font-size:2rem;margin:0;">Weather & Seasonal Herbal Calendar</h2>
+        <p style="color:#6e5e5b;margin:4px 0 0;font-size:0.95rem;">
+          Plan your sowing, harvesting, and shade drying with real-time agro-weather alerts and Ayurvedic seasonal calendars.
+        </p>
+      </div>
+
+      <!-- Live Weather Widget Section -->
+      <div class="card" style="margin-bottom:34px;background:linear-gradient(135deg, #ffffff 0%, #fbf5ee 100%);padding:30px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:20px;">
+          <div>
+            <h3 style="font-size:1.35rem;margin:0;color:var(--color-primary);">District Agro-Weather Widget</h3>
+            <p style="font-size:0.85rem;color:#777;margin:2px 0 0;">Current conditions & post-harvest drying suitability</p>
+          </div>
+
+          <div style="display:flex;gap:10px;">
+            <input type="text" id="weather-search-city" class="form-control" placeholder="Search District (e.g. Pune, Satara, Mehsana, Salem, Pali)" style="width:260px;">
+            <button id="weather-search-btn" class="btn btn-primary btn-sm">Update 🌤️</button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:center;" id="weather-details-grid">
+          <div style="display:flex;align-items:center;gap:24px;">
+            <div id="w-icon" style="font-size:64px;">🌤️</div>
+            <div>
+              <div style="font-size:3rem;font-weight:700;color:var(--color-primary);line-height:1;">
+                <span id="w-temp">28</span>°C
+              </div>
+              <div id="w-desc" style="font-size:1.05rem;color:#555;font-weight:500;margin-top:4px;">Partly Cloudy</div>
+              <div id="w-location" style="font-size:0.85rem;color:#888;">Pune, Maharashtra</div>
+            </div>
+          </div>
+
+          <div style="background:#ffffff;padding:20px;border-radius:12px;border:1px solid var(--color-sand);">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:0.9rem;">
+              <span>Relative Humidity:</span>
+              <strong id="w-humidity">58%</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:0.9rem;">
+              <span>Wind Speed:</span>
+              <strong id="w-wind">3.4 m/s</strong>
+            </div>
+            <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e4d5c7;font-size:0.88rem;color:#2e6930;background:#f5faf3;padding:10px;border-radius:6px;">
+              <strong>🌾 FieldRoot Advisory:</strong>
+              <span id="w-advisory">Optimal conditions for shade-drying and seed storage.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seasonal Sowing & Harvesting Calendar Tabs -->
+      <div class="section-title-wrap" style="text-align:left;margin-bottom:20px;">
+        <h3 style="font-size:1.5rem;margin:0;">Seasonal Sowing & Harvesting Timetable (30+ Cosmetic Crops)</h3>
+        <p style="color:#777;margin-top:4px;">Categorized by Indian agricultural seasons</p>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-bottom:24px;">
+        <button id="season-btn-kharif" class="btn btn-primary btn-sm" onclick="showSeason('kharif')">
+          🌧️ Kharif (Monsoon: June - Oct)
+        </button>
+        <button id="season-btn-rabi" class="btn btn-outline btn-sm" onclick="showSeason('rabi')">
+          ❄️ Rabi (Winter: Oct - March)
+        </button>
+        <button id="season-btn-perennial" class="btn btn-outline btn-sm" onclick="showSeason('perennial')">
+          ☀️ Zaid & Perennials (Year-Round)
+        </button>
+      </div>
+
+      <div id="calendar-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(340px, 1fr));gap:24px;">
+        <div style="text-align:center;padding:40px;color:#888;grid-column:1/-1;">Loading seasonal calendar...</div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    let calendarData = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      const user = Auth.getUser();
+      const initialCity = (user && user.district) ? user.district : 'Pune';
+      document.getElementById('weather-search-city').value = initialCity;
+
+      await loadWeather(initialCity);
+      await loadCalendar();
+
+      document.getElementById('weather-search-btn').addEventListener('click', () => {
+        const city = document.getElementById('weather-search-city').value.trim();
+        if (city) loadWeather(city);
+      });
+    });
+
+    async function loadWeather(city) {
+      try {
+        const res = await API.get('/weather/current', { city });
+        if (res.success) {
+          document.getElementById('w-temp').textContent = res.temp;
+          document.getElementById('w-desc').textContent = res.description;
+          document.getElementById('w-location').textContent = `${res.city}, India`;
+          document.getElementById('w-humidity').textContent = `${res.humidity}%`;
+          document.getElementById('w-wind').textContent = `${res.windSpeed || 3.4} m/s`;
+          document.getElementById('w-advisory').textContent = res.advisory;
+        }
+      } catch (e) {
+        console.warn('Weather error:', e);
+      }
+    }
+
+    async function loadCalendar() {
+      try {
+        const res = await API.get('/weather/calendar');
+        if (res.calendar) {
+          calendarData = res.calendar;
+          showSeason('kharif');
+        }
+      } catch (e) {
+        console.warn('Calendar error:', e);
+      }
+    }
+
+    function showSeason(seasonKey) {
+      if (!calendarData || !calendarData[seasonKey]) return;
+
+      const buttons = ['kharif', 'rabi', 'perennial'];
+      buttons.forEach(b => {
+        const btn = document.getElementById(`season-btn-${b}`);
+        if (b === seasonKey) {
+          btn.className = 'btn btn-primary btn-sm';
+        } else {
+          btn.className = 'btn btn-outline btn-sm';
+        }
+      });
+
+      const season = calendarData[seasonKey];
+      const grid = document.getElementById('calendar-cards-grid');
+
+      grid.innerHTML = season.crops.map(c => `
+        <div class="card" style="display:flex;align-items:center;gap:16px;">
+          <img src="${c.image}" alt="${c.name}" style="width:70px;height:70px;border-radius:12px;object-fit:cover;border:1px solid #ddd;flex-shrink:0;">
+          <div style="flex:1;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;">
+              <h4 style="font-size:1.15rem;margin:0;color:var(--color-primary);">${c.name}</h4>
+              <span class="badge" style="background:#f4ece2;color:#6f4e37;text-transform:capitalize;font-size:0.75rem;">${c.category}</span>
+            </div>
+            <div style="font-size:0.82rem;color:#777;margin:2px 0 6px;">${c.hindiName || ''}</div>
+            <div style="font-size:0.8rem;color:#555;">
+              🌱 <strong>Sowing:</strong> ${c.sowing}<br>
+              ✂️ <strong>Harvest:</strong> ${c.harvest}
+            </div>
+            <div style="margin-top:6px;font-size:0.82rem;font-weight:600;color:var(--color-leaf);">
+              Est. Profit: ₹${c.profitPerAcre.toLocaleString('en-IN')}/acre
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

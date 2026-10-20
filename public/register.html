@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:40px;">
+    <div class="container container-narrow">
+      <div class="card" style="max-width:680px;margin:0 auto;padding:36px;">
+        <div style="text-align:center;margin-bottom:28px;">
+          <div class="brand-icon" style="margin:0 auto 14px;width:52px;height:52px;font-size:26px;">🌱</div>
+          <h2 style="font-size:1.8rem;margin-bottom:6px;">Create Your Account</h2>
+          <p style="color:#6e5e5b;font-size:0.92rem;">Join India's premier ethical herbal supply network</p>
+
+          <!-- Role Selector Tabs -->
+          <div style="display:inline-flex;background:#f5ece2;padding:4px;border-radius:var(--radius-pill);margin-top:16px;">
+            <button type="button" id="role-tab-farmer" class="btn btn-sm btn-primary" onclick="setRole('farmer')">
+              👨🏽‍🌾 Farmer (किसान)
+            </button>
+            <button type="button" id="role-tab-company" class="btn btn-sm" style="background:none;color:#4a2c2a;" onclick="setRole('company')">
+              🏢 Herbal Brand / Buyer
+            </button>
+          </div>
+        </div>
+
+        <form id="register-form">
+          <input type="hidden" id="reg-role" value="farmer">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Full Name (पूरा नाम) *</label>
+              <div class="input-with-action">
+                <input type="text" id="reg-name" class="form-control" placeholder="e.g. Rameshwar Patil" required>
+                <button type="button" id="voice-name-btn" class="btn-voice" title="Speak name">🎙️</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Mobile Number (मोबाइल नंबर) *</label>
+              <input type="tel" id="reg-phone" class="form-control" placeholder="10-digit number" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Password (पासवर्ड) *</label>
+              <input type="password" id="reg-password" class="form-control" placeholder="Min. 6 characters" minlength="6" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Preferred Language (पसंदीदा भाषा)</label>
+              <select id="reg-lang" class="form-control">
+                <option value="en">English</option>
+                <option value="hi" selected>हिन्दी (Hindi)</option>
+                <option value="mr">मराठी (Marathi)</option>
+                <option value="gu">ગુજરાતી (Gujarati)</option>
+                <option value="ta">தமிழ் (Tamil)</option>
+                <option value="te">తెలుగు (Telugu)</option>
+                <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                <option value="bn">বাংলা (Bengali)</option>
+                <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Farmer-Specific Section -->
+          <div id="farmer-fields-wrap">
+            <h4 style="font-size:1.05rem;color:var(--color-primary);margin:16px 0 12px;border-bottom:1px dashed var(--color-sand);padding-bottom:6px;">
+              🌾 Farm Details (कृषि जानकारी)
+            </h4>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Village (गाँव)</label>
+                <div class="input-with-action">
+                  <input type="text" id="reg-village" class="form-control" placeholder="e.g. Koregaon">
+                  <button type="button" id="voice-village-btn" class="btn-voice" title="Speak village">🎙️</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">District (ज़िला) *</label>
+                <input type="text" id="reg-district" class="form-control" placeholder="e.g. Satara" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">State (राज्य) *</label>
+                <select id="reg-state" class="form-control" required>
+                  <option value="">Select State</option>
+                  <option value="Maharashtra">Maharashtra</option>
+                  <option value="Gujarat">Gujarat</option>
+                  <option value="Tamil Nadu">Tamil Nadu</option>
+                  <option value="Rajasthan">Rajasthan</option>
+                  <option value="Madhya Pradesh">Madhya Pradesh</option>
+                  <option value="Punjab">Punjab</option>
+                  <option value="Karnataka">Karnataka</option>
+                  <option value="Andhra Pradesh">Andhra Pradesh</option>
+                  <option value="Kerala">Kerala</option>
+                  <option value="Uttar Pradesh">Uttar Pradesh</option>
+                  <option value="Uttarakhand">Uttarakhand</option>
+                  <option value="West Bengal">West Bengal</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Farm Size (एकड़ में ज़मीन)</label>
+                <input type="number" id="reg-farmsize" class="form-control" placeholder="e.g. 5" step="0.5" min="0">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Soil Type (मिट्टी का प्रकार)</label>
+                <select id="reg-soiltype" class="form-control">
+                  <option value="Black Soil">Black Soil (काली मिट्टी)</option>
+                  <option value="Loamy" selected>Loamy (दोमट मिट्टी)</option>
+                  <option value="Sandy Loam">Sandy Loam (बलुई दोमट)</option>
+                  <option value="Red Soil">Red Soil (लाल मिट्टी)</option>
+                  <option value="Alluvial">Alluvial (जलोढ़ मिट्टी)</option>
+                  <option value="Laterite">Laterite (लैटेराइट)</option>
+                  <option value="Arid Soil">Arid Soil (रेतीली / शुष्क)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Crops You Currently Grow (मुख्य फसलें)</label>
+              <input type="text" id="reg-crops" class="form-control" placeholder="e.g. Reetha, Shikakai, Neem, Turmeric, Aloe Vera">
+            </div>
+          </div>
+
+          <!-- Company-Specific Section -->
+          <div id="company-fields-wrap" style="display:none;">
+            <h4 style="font-size:1.05rem;color:var(--color-primary);margin:16px 0 12px;border-bottom:1px dashed var(--color-sand);padding-bottom:6px;">
+              🏢 Brand / Company Details
+            </h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Company Name *</label>
+                <input type="text" id="reg-company-name" class="form-control" placeholder="e.g. AyurBloom Natural Cosmetics">
+              </div>
+              <div class="form-group">
+                <label class="form-label">GST Number (Optional)</label>
+                <input type="text" id="reg-company-gst" class="form-control" placeholder="e.g. 27AABCU9603R1ZM">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Short Bio / Experience</label>
+            <div class="input-with-action">
+              <textarea id="reg-bio" class="form-control" rows="2" placeholder="e.g. Practicing cow-based ZBNF organic farming for 8 years..."></textarea>
+              <button type="button" id="voice-bio-btn" class="btn-voice" title="Speak bio" style="align-self:flex-start;">🎙️</button>
+            </div>
+          </div>
+
+          <button type="submit" id="reg-submit-btn" class="btn btn-primary btn-lg" style="width:100%;margin-top:10px;">
+            Complete Registration →
+          </button>
+        </form>
+
+        <div style="text-align:center;margin-top:20px;font-size:0.9rem;color:#6e5e5b;">
+          Already have an account? <a href="/login.html" style="font-weight:600;color:var(--color-primary);">Log in here</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/voice.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    function setRole(role) {
+      document.getElementById('reg-role').value = role;
+      const farmerTab = document.getElementById('role-tab-farmer');
+      const companyTab = document.getElementById('role-tab-company');
+      const farmerFields = document.getElementById('farmer-fields-wrap');
+      const companyFields = document.getElementById('company-fields-wrap');
+
+      if (role === 'farmer') {
+        farmerTab.className = 'btn btn-sm btn-primary';
+        farmerTab.style.background = '';
+        farmerTab.style.color = '#ffffff';
+
+        companyTab.className = 'btn btn-sm';
+        companyTab.style.background = 'none';
+        companyTab.style.color = '#4a2c2a';
+
+        farmerFields.style.display = 'block';
+        companyFields.style.display = 'none';
+        document.getElementById('reg-district').required = true;
+        document.getElementById('reg-state').required = true;
+      } else {
+        companyTab.className = 'btn btn-sm btn-primary';
+        companyTab.style.background = '';
+        companyTab.style.color = '#ffffff';
+
+        farmerTab.className = 'btn btn-sm';
+        farmerTab.style.background = 'none';
+        farmerTab.style.color = '#4a2c2a';
+
+        farmerFields.style.display = 'none';
+        companyFields.style.display = 'block';
+        document.getElementById('reg-district').required = false;
+        document.getElementById('reg-state').required = false;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      // Check URL query role
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('role') === 'company') {
+        setRole('company');
+      }
+
+      // Voice input helpers
+      VoiceInput.attach('reg-name', 'voice-name-btn');
+      VoiceInput.attach('reg-village', 'voice-village-btn');
+      VoiceInput.attach('reg-bio', 'voice-bio-btn');
+
+      const form = document.getElementById('register-form');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const role = document.getElementById('reg-role').value;
+        const name = document.getElementById('reg-name').value.trim();
+        const phone = document.getElementById('reg-phone').value.trim();
+        const password = document.getElementById('reg-password').value;
+        const preferredLanguage = document.getElementById('reg-lang').value;
+        const bio = document.getElementById('reg-bio').value.trim();
+
+        const payload = {
+          role,
+          name,
+          phone,
+          password,
+          preferredLanguage,
+          bio
+        };
+
+        if (role === 'farmer') {
+          payload.village = document.getElementById('reg-village').value.trim();
+          payload.district = document.getElementById('reg-district').value.trim();
+          payload.state = document.getElementById('reg-state').value;
+          payload.farmSize = document.getElementById('reg-farmsize').value || 0;
+          payload.soilType = document.getElementById('reg-soiltype').value;
+          const cropsStr = document.getElementById('reg-crops').value.trim();
+          payload.cropsGrown = cropsStr ? cropsStr.split(',').map(s => s.trim()) : [];
+        } else {
+          payload.companyDetails = {
+            companyName: document.getElementById('reg-company-name').value.trim() || 'Herbal Cosmetics Buyer',
+            gstNumber: document.getElementById('reg-company-gst').value.trim()
+          };
+        }
+
+        const btn = document.getElementById('reg-submit-btn');
+        btn.disabled = true;
+        btn.textContent = 'Registering account...';
+
+        try {
+          const res = await API.post('/auth/register', payload);
+          Auth.setSession(res.token, res.user);
+          await I18N.setLanguage(preferredLanguage);
+          showToast('Registration successful! Welcome to FieldRoot.', 'success');
+
+          setTimeout(() => {
+            window.location.href = role === 'farmer' ? '/farmer-dashboard.html' : '/marketplace.html';
+          }, 800);
+        } catch (err) {
+          showToast(err.message || 'Registration failed.', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Complete Registration →';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

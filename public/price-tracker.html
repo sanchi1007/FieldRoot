@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mandi Price Tracker — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container">
+      <div style="margin-bottom:28px;">
+        <span class="badge badge-grade-a" style="margin-bottom:6px;">APMC Market Benchmark</span>
+        <h2 style="font-size:2rem;margin:0;">Mandi Price vs. FieldRoot Direct Rates</h2>
+        <p style="color:#6e5e5b;margin:4px 0 0;font-size:0.95rem;">
+          Compare live APMC market prices with FieldRoot direct procurement rates across Indian states. See the 25–40% trader cut eliminated.
+        </p>
+      </div>
+
+      <!-- Quick KPI summary -->
+      <div class="stats-grid" style="margin-top:0;margin-bottom:30px;">
+        <div class="stat-card" style="border-left:5px solid var(--color-leaf);text-align:left;">
+          <div class="stat-label">Average Farmer Bonus Premium</div>
+          <div id="stat-avg-bonus" class="stat-number" style="color:var(--color-leaf);">+29%</div>
+          <div style="font-size:0.8rem;color:#777;">Paid over APMC modal price</div>
+        </div>
+
+        <div class="stat-card" style="border-left:5px solid var(--color-caramel);text-align:left;">
+          <div class="stat-label">Middleman Margins Eliminated</div>
+          <div class="stat-number" style="color:var(--color-caramel);">25 - 43%</div>
+          <div style="font-size:0.8rem;color:#777;">Zero commission agent cuts</div>
+        </div>
+
+        <div class="stat-card" style="border-left:5px solid var(--color-primary);text-align:left;">
+          <div class="stat-label">Crops Actively Tracked</div>
+          <div id="stat-tracked-crops" class="stat-number" style="color:var(--color-primary);">25</div>
+          <div style="font-size:0.8rem;color:#777;">Across Maharashtra, Gujarat, TN, RJ</div>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="card" style="padding:20px;margin-bottom:24px;">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:14px;align-items:end;">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" style="font-size:0.82rem;">Search Crop / Mandi</label>
+            <input type="text" id="price-search" class="form-control" placeholder="Search Reetha, Shikakai, Pune, Neemuch...">
+          </div>
+
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" style="font-size:0.82rem;">Category</label>
+            <select id="price-category" class="form-control">
+              <option value="all">All Categories</option>
+              <option value="hair care">Hair Care</option>
+              <option value="skin care">Skin Care</option>
+              <option value="health and wellness">Health & Wellness</option>
+              <option value="oils">Oils</option>
+              <option value="flowers">Flowers</option>
+              <option value="herbs">Herbs</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" style="font-size:0.82rem;">State</label>
+            <select id="price-state" class="form-control">
+              <option value="all">All States</option>
+              <option value="Maharashtra">Maharashtra</option>
+              <option value="Gujarat">Gujarat</option>
+              <option value="Tamil Nadu">Tamil Nadu</option>
+              <option value="Rajasthan">Rajasthan</option>
+              <option value="Madhya Pradesh">Madhya Pradesh</option>
+              <option value="Punjab">Punjab</option>
+              <option value="Kerala">Kerala</option>
+              <option value="Uttar Pradesh">Uttar Pradesh</option>
+            </select>
+          </div>
+
+          <div>
+            <button id="price-filter-btn" class="btn btn-primary" style="height:46px;">
+              Filter 🔍
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Price Records Table -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Herbal Crop</th>
+                <th>APMC Mandi & Location</th>
+                <th>Mandi Modal Price</th>
+                <th>Mandi Range (Min-Max)</th>
+                <th>FieldRoot Direct Price</th>
+                <th>Farmer Net Benefit</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="price-records-tbody">
+              <tr><td colspan="7" style="text-align:center;padding:40px;color:#888;">Loading Mandi price data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      await fetchPrices();
+
+      document.getElementById('price-filter-btn').addEventListener('click', fetchPrices);
+      document.getElementById('price-search').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') fetchPrices();
+      });
+      document.getElementById('price-category').addEventListener('change', fetchPrices);
+      document.getElementById('price-state').addEventListener('change', fetchPrices);
+    });
+
+    async function fetchPrices() {
+      const search = document.getElementById('price-search').value.trim();
+      const category = document.getElementById('price-category').value;
+      const state = document.getElementById('price-state').value;
+
+      const params = {};
+      if (search) params.search = search;
+      if (category && category !== 'all') params.category = category;
+      if (state && state !== 'all') params.state = state;
+
+      const tbody = document.getElementById('price-records-tbody');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#888;">Loading prices...</td></tr>';
+
+      try {
+        const res = await API.get('/prices', params);
+        if (res.averageFarmerBonusPercent) {
+          document.getElementById('stat-avg-bonus').textContent = `+${res.averageFarmerBonusPercent}%`;
+        }
+        if (res.count) {
+          document.getElementById('stat-tracked-crops').textContent = res.count;
+        }
+
+        if (!res.records || res.records.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#888;">No price records matched your search.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = res.records.map(r => {
+          const gain = Math.round(((r.fieldrootDirectPrice - r.modalPrice) / r.modalPrice) * 100);
+          return `
+            <tr>
+              <td>
+                <div style="font-weight:700;color:var(--color-primary);font-size:1rem;">${r.cropName}</div>
+                <span class="badge" style="background:#f4ece2;color:#6f4e37;text-transform:capitalize;font-size:0.75rem;">${r.category}</span>
+              </td>
+              <td>
+                <strong>${r.mandiName}</strong>
+                <div style="font-size:0.8rem;color:#777;">${r.district}, ${r.state}</div>
+              </td>
+              <td>
+                <span style="font-size:1rem;color:#555;">₹${r.modalPrice} / ${r.unit}</span>
+              </td>
+              <td>
+                <span style="font-size:0.85rem;color:#777;">₹${r.minPrice} - ₹${r.maxPrice}</span>
+              </td>
+              <td>
+                <strong style="color:var(--color-leaf);font-size:1.15rem;">₹${r.fieldrootDirectPrice} / ${r.unit}</strong>
+              </td>
+              <td>
+                <span class="badge badge-organic" style="font-size:0.85rem;">+${gain}% Extra</span>
+                <div style="font-size:0.75rem;color:#666;margin-top:2px;">No mandi agent cut</div>
+              </td>
+              <td>
+                <a href="/add-product.html" class="btn btn-primary btn-sm">
+                  Sell at ₹${r.fieldrootDirectPrice}
+                </a>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:red;">Error: ${err.message}</td></tr>`;
+      }
+    }
+  </script>
+</body>
+</html>

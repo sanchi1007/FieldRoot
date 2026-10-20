@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Dashboard — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container">
+      <!-- Farmer Profile Header Banner -->
+      <div class="card" style="margin-bottom:28px;background:linear-gradient(135deg, #ffffff 0%, #fbf5ee 100%);">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;">
+          <div style="display:flex;align-items:center;gap:18px;">
+            <div style="width:68px;height:68px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;">
+              👨🏽‍🌾
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <h2 id="farmer-name" style="margin:0;font-size:1.6rem;">Farmer Portal</h2>
+                <span id="farmer-verified-badge" class="badge badge-verified">✓ Verified Grower</span>
+              </div>
+              <p id="farmer-location" style="color:var(--color-text-muted);margin:4px 0 0;font-size:0.92rem;">
+                Village, District, State
+              </p>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <div class="badge badge-trust" style="font-size:0.95rem;padding:8px 16px;">
+              ★ <span id="farmer-trust-score">5.0</span> Farmer Trust Score
+            </div>
+            <a href="/add-product.html" class="btn btn-primary">
+              + Add New Harvest
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick KPI Counters -->
+      <div class="stats-grid" style="margin-top:0;margin-bottom:30px;">
+        <div class="stat-card" style="text-align:left;border-left:5px solid var(--color-leaf);">
+          <div class="stat-label">Total Earnings (Direct Payouts)</div>
+          <div id="stat-total-earned" class="stat-number" style="color:var(--color-leaf);font-size:2.2rem;">₹0</div>
+          <div style="font-size:0.8rem;color:#888;">Zero commission deductions</div>
+        </div>
+
+        <div class="stat-card" style="text-align:left;border-left:5px solid var(--color-caramel);">
+          <div class="stat-label">Pending Payments in Escrow</div>
+          <div id="stat-pending-payments" class="stat-number" style="color:var(--color-caramel);font-size:2.2rem;">₹0</div>
+          <div style="font-size:0.8rem;color:#888;">Dispatched & delivered batches</div>
+        </div>
+
+        <div class="stat-card" style="text-align:left;border-left:5px solid var(--color-chocolate);">
+          <div class="stat-label">Active Herbal Listings</div>
+          <div id="stat-active-products" class="stat-number" style="color:var(--color-chocolate);font-size:2.2rem;">0</div>
+          <div style="font-size:0.8rem;color:#888;">Live on Marketplace</div>
+        </div>
+
+        <div class="stat-card" style="text-align:left;border-left:5px solid var(--color-primary);">
+          <div class="stat-label">Active Farming Contracts</div>
+          <div id="stat-active-contracts" class="stat-number" style="color:var(--color-primary);font-size:2.2rem;">0</div>
+          <div style="font-size:0.8rem;color:#888;">With 20% advance locked</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.35fr 0.85fr;gap:28px;">
+        <!-- Left Column: Demand Alerts & Recent Orders -->
+        <div>
+          <!-- Real-Time Company Demand Alerts -->
+          <div class="card" style="margin-bottom:28px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <h3 style="font-size:1.25rem;margin:0;">🔔 Urgent FieldRoot Sourcing Demands</h3>
+              <a href="/contracts.html" class="btn btn-sm btn-outline">All Contracts →</a>
+            </div>
+            <div id="demand-alerts-list" style="display:flex;flex-direction:column;gap:12px;">
+              <div style="text-align:center;padding:20px;color:#888;">Loading demand alerts...</div>
+            </div>
+          </div>
+
+          <!-- Recent Orders / Buy Inquiries -->
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <h3 style="font-size:1.25rem;margin:0;">📦 Recent Buy Requests & Orders</h3>
+              <a href="/orders.html" class="btn btn-sm btn-outline">View All Orders →</a>
+            </div>
+            <div id="recent-orders-list">
+              <div style="text-align:center;padding:20px;color:#888;">Loading your sales orders...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Agro-Weather Widget & Helpful Tools -->
+        <div>
+          <!-- Live Weather & Agricultural Advisory Widget -->
+          <div class="card" style="margin-bottom:28px;background:linear-gradient(180deg, #ffffff 0%, #f7f1ea 100%);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <h3 style="font-size:1.15rem;margin:0;">🌤️ Local Agro-Weather</h3>
+              <span id="weather-city" class="badge badge-grade-a">District Weather</span>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:18px;margin:16px 0;">
+              <div id="weather-icon-display" style="font-size:42px;">⛅</div>
+              <div>
+                <div style="font-size:2rem;font-weight:700;color:var(--color-primary);line-height:1;">
+                  <span id="weather-temp">28</span>°C
+                </div>
+                <div id="weather-desc" style="font-size:0.85rem;color:#666;">Partly Cloudy</div>
+              </div>
+              <div style="margin-left:auto;text-align:right;font-size:0.85rem;color:#666;">
+                <div>Humidity: <strong id="weather-humidity">58%</strong></div>
+                <div>Wind: <strong id="weather-wind">3.4 m/s</strong></div>
+              </div>
+            </div>
+
+            <!-- Smart Advisory Callout -->
+            <div style="background:#ffffff;border-left:4px solid var(--color-leaf);padding:12px 14px;border-radius:6px;font-size:0.85rem;color:#333;">
+              <strong>🌾 Agronomist Tip:</strong>
+              <span id="weather-advisory">Optimal conditions for herbal shade drying and organic foliar spray.</span>
+            </div>
+
+            <a href="/weather-calendar.html" class="btn btn-outline btn-sm" style="width:100%;margin-top:14px;">
+              Seasonal Sowing Calendar →
+            </a>
+          </div>
+
+          <!-- Quick Navigation Tools -->
+          <div class="card">
+            <h3 style="font-size:1.15rem;margin-bottom:14px;">🛠️ Farmer Tools</h3>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <a href="/crop-advisor.html" class="btn btn-outline" style="justify-content:flex-start;text-align:left;">
+                🌾 Soil & Profit Crop Advisor
+              </a>
+              <a href="/price-tracker.html" class="btn btn-outline" style="justify-content:flex-start;text-align:left;">
+                📊 Mandi vs FieldRoot Price Tracker
+              </a>
+              <a href="/learn.html" class="btn btn-outline" style="justify-content:flex-start;text-align:left;">
+                🧪 Jeevamrutha & Pest Spray Guides
+              </a>
+              <a href="/community.html" class="btn btn-outline" style="justify-content:flex-start;text-align:left;">
+                💬 Farmer Peer Q&A Forum
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      if (!Auth.requireAuth(['farmer', 'admin'])) return;
+
+      const user = Auth.getUser();
+
+      // Set user header details
+      document.getElementById('farmer-name').textContent = user.name;
+      document.getElementById('farmer-location').textContent =
+        `${user.village ? user.village + ', ' : ''}${user.district || 'District'}, ${user.state || 'State'} • Farm: ${user.farmSize || 0} Acres`;
+      document.getElementById('farmer-trust-score').textContent = user.trustScore || 5.0;
+
+      // 1. Fetch Earnings KPI summary
+      try {
+        const earningsRes = await API.get('/earnings/farmer');
+        if (earningsRes.summary) {
+          document.getElementById('stat-total-earned').textContent =
+            `₹${earningsRes.summary.totalEarned.toLocaleString('en-IN')}`;
+          document.getElementById('stat-pending-payments').textContent =
+            `₹${earningsRes.summary.pendingPayments.toLocaleString('en-IN')}`;
+        }
+      } catch (e) {
+        console.warn('Earnings load error:', e);
+      }
+
+      // 2. Fetch My Products count
+      try {
+        const prodRes = await API.get('/products/my');
+        if (prodRes.analytics) {
+          document.getElementById('stat-active-products').textContent = prodRes.analytics.activeListings;
+        }
+      } catch (e) {
+        console.warn('Products load error:', e);
+      }
+
+      // 3. Fetch My Contracts count
+      try {
+        const contractRes = await API.get('/contracts/my');
+        document.getElementById('stat-active-contracts').textContent = contractRes.count || 0;
+      } catch (e) {
+        console.warn('Contracts load error:', e);
+      }
+
+      // 4. Fetch Demand Alerts
+      try {
+        const alertRes = await API.get('/advisor/demand-alerts');
+        const container = document.getElementById('demand-alerts-list');
+        if (alertRes.alerts && alertRes.alerts.length > 0) {
+          container.innerHTML = alertRes.alerts.slice(0, 3).map(a => `
+            <div style="background:#faf4ed;padding:14px;border-radius:10px;border-left:4px solid var(--color-caramel);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div>
+                <strong style="color:var(--color-primary);font-size:0.95rem;">${a.title}</strong>
+                <div style="font-size:0.82rem;color:#666;margin-top:2px;">
+                  Offered Price: <strong style="color:var(--color-leaf);">${a.offeredPrice}</strong> • Advance: ${a.advanceOffer}
+                </div>
+              </div>
+              <a href="/contracts.html" class="btn btn-sm btn-primary">Review & Accept</a>
+            </div>
+          `).join('');
+        }
+      } catch (e) {
+        console.warn('Demand alerts error:', e);
+      }
+
+      // 5. Fetch Recent Orders
+      try {
+        const ordersRes = await API.get('/orders');
+        const container = document.getElementById('recent-orders-list');
+        if (ordersRes.orders && ordersRes.orders.length > 0) {
+          container.innerHTML = ordersRes.orders.slice(0, 4).map(o => `
+            <div style="padding:14px 0;border-bottom:1px solid #f2e7db;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+              <div>
+                <div style="font-weight:600;color:var(--color-primary);">${o.productName} (${o.quantity} ${o.unit})</div>
+                <div style="font-size:0.82rem;color:#777;">
+                  Order #${o.orderNumber} • Net Payout: <strong style="color:var(--color-leaf);">₹${o.farmerReceivable.toLocaleString('en-IN')}</strong>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="badge badge-status badge-status-${o.status.toLowerCase()}">${o.status}</span>
+                <a href="/orders.html" class="btn btn-sm btn-outline">Details</a>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">No orders yet. List your products or accept a contract!</div>';
+        }
+      } catch (e) {
+        console.warn('Orders error:', e);
+      }
+
+      // 6. Fetch Weather
+      try {
+        const city = user.district || 'Pune';
+        const weatherRes = await API.get('/weather/current', { city });
+        if (weatherRes.success) {
+          document.getElementById('weather-city').textContent = weatherRes.city;
+          document.getElementById('weather-temp').textContent = weatherRes.temp;
+          document.getElementById('weather-desc').textContent = weatherRes.description;
+          document.getElementById('weather-humidity').textContent = weatherRes.humidity + '%';
+          document.getElementById('weather-wind').textContent = (weatherRes.windSpeed || 3.4) + ' m/s';
+          document.getElementById('weather-advisory').textContent = weatherRes.advisory;
+        }
+      } catch (e) {
+        console.warn('Weather error:', e);
+      }
+    });
+  </script>
+</body>
+</html>

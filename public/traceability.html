@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Batch Traceability & Farmer Origin — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+  <style>
+    @media print {
+      header, footer, .no-print { display: none !important; }
+      body { background: #ffffff !important; font-size: 12pt; }
+      .card { border: 1px solid #000 !important; box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container container-narrow">
+      <!-- Search / Input Batch Bar -->
+      <div class="no-print" style="margin-bottom:24px;">
+        <div class="card" style="padding:16px 20px;">
+          <form id="trace-search-form" style="display:flex;gap:12px;align-items:center;">
+            <span style="font-weight:600;font-size:0.9rem;white-space:nowrap;">Enter Packaging Batch #:</span>
+            <input type="text" id="trace-input" class="form-control" placeholder="e.g. BATCH-614608" required>
+            <button type="submit" class="btn btn-primary btn-sm" style="white-space:nowrap;">Verify Origin 🔍</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Certificate Container -->
+      <div id="traceability-certificate-container">
+        <div style="text-align:center;padding:50px;color:#888;">Looking up batch records...</div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const batch = urlParams.get('batch') || 'BATCH-614608';
+      document.getElementById('trace-input').value = batch;
+
+      await loadBatchTraceability(batch);
+
+      document.getElementById('trace-search-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const b = document.getElementById('trace-input').value.trim();
+        if (b) {
+          window.location.search = `?batch=${encodeURIComponent(b)}`;
+        }
+      });
+    });
+
+    async function loadBatchTraceability(batchNumber) {
+      const container = document.getElementById('traceability-certificate-container');
+      container.innerHTML = '<div style="text-align:center;padding:50px;color:#888;">Verifying cryptographic farm batch records...</div>';
+
+      try {
+        const res = await API.get(`/traceability/${batchNumber}`);
+        const t = res.traceability;
+
+        const harvestDateStr = new Date(t.harvestDate).toLocaleDateString('en-IN', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        });
+
+        container.innerHTML = `
+          <div class="card" style="padding:40px;background:#ffffff;border:2px solid var(--color-caramel);position:relative;">
+            <!-- Ribbon / Stamp -->
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;border-bottom:2px solid var(--color-sand);padding-bottom:24px;margin-bottom:28px;">
+              <div>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                  <span style="font-size:28px;">🌿</span>
+                  <h2 style="font-size:1.6rem;margin:0;color:var(--color-primary);">FieldRoot Botanical Passport</h2>
+                </div>
+                <div style="font-size:0.85rem;color:var(--color-leaf);font-weight:600;letter-spacing:1px;text-transform:uppercase;">
+                  100% Farm-To-Bottle Verified Origin
+                </div>
+              </div>
+
+              <div style="text-align:right;">
+                <span class="badge badge-grade-a" style="font-size:0.95rem;padding:6px 14px;">${t.qualityGrade}</span>
+                <div style="font-family:monospace;font-size:1.1rem;font-weight:700;color:var(--color-primary);margin-top:6px;">
+                  ${t.batchNumber}
+                </div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 180px;gap:30px;align-items:start;margin-bottom:28px;" id="cert-grid">
+              <div>
+                <h3 style="font-size:1.7rem;margin-bottom:4px;color:var(--color-primary);">${t.productName}</h3>
+                ${t.botanicalName ? `<div style="font-size:1.05rem;font-style:italic;color:#6e5e5b;margin-bottom:14px;">Botanical: ${t.botanicalName}</div>` : ''}
+
+                <div style="background:#fcf9f4;border:1px solid var(--color-sand);padding:18px;border-radius:12px;margin-bottom:18px;">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:0.9rem;">
+                    <div>📅 <strong>Harvest Date:</strong> ${harvestDateStr}</div>
+                    <div>🌱 <strong>Organic Status:</strong> ${t.isOrganic ? '100% Chemical-Free' : 'Natural'}</div>
+                    <div>🏷️ <strong>Category:</strong> <span style="text-transform:capitalize;">${t.category}</span></div>
+                    <div>🔬 <strong>Inspection:</strong> Lab Passed & Certified</div>
+                  </div>
+                </div>
+
+                <div style="font-size:0.88rem;color:#444;line-height:1.6;">
+                  <strong>Soil & Farming Practice:</strong><br>
+                  ${t.organicDetails}
+                </div>
+              </div>
+
+              <!-- Printable QR Code Label Box -->
+              <div style="text-align:center;background:#faf5ee;border:1px dashed var(--color-caramel);padding:16px;border-radius:14px;">
+                <img src="${t.qrCodeDataUrl}" alt="Batch QR Code" style="width:130px;height:130px;margin:0 auto 10px;border:2px solid #fff;border-radius:8px;box-shadow:var(--shadow-sm);">
+                <div style="font-size:0.75rem;color:#777;margin-bottom:10px;">Scan to open this verification passport</div>
+                <button type="button" class="btn btn-primary btn-sm no-print" onclick="window.print()" style="width:100%;">
+                  🖨️ Print Label
+                </button>
+              </div>
+            </div>
+
+            <!-- Meet the Grower Profile Section -->
+            <div style="border-top:2px solid var(--color-sand);padding-top:24px;margin-top:20px;">
+              <h4 style="font-size:1.15rem;margin-bottom:14px;color:var(--color-primary);">
+                👨🏽‍🌾 Meet the Farmer Behind This Harvest
+              </h4>
+
+              <div style="display:flex;gap:20px;align-items:center;background:#faf6f1;padding:20px;border-radius:14px;">
+                <div style="width:68px;height:68px;border-radius:50%;background:var(--color-chocolate);color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;flex-shrink:0;">
+                  ${t.farmer.name[0]}
+                </div>
+                <div style="flex:1;">
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <h4 style="font-size:1.2rem;margin:0;">${t.farmer.name}</h4>
+                    <span class="badge badge-trust">★ ${t.farmer.trustScore} Trust Score</span>
+                    <span class="badge badge-verified">✓ KYC Certified</span>
+                  </div>
+                  <p style="color:#666;font-size:0.88rem;margin:4px 0 8px;">
+                    📍 ${t.farmer.village ? t.farmer.village + ', ' : ''}${t.farmer.district}, ${t.farmer.state} • Farm Size: ${t.farmer.farmSize} • Soil: ${t.farmer.soilType}
+                  </p>
+                  <p style="color:#444;font-size:0.9rem;font-style:italic;margin:0;line-height:1.5;">
+                    "${t.farmer.bio}"
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Brand Guarantee Banner -->
+            <div style="margin-top:24px;background:var(--color-primary);color:#fff;padding:16px 20px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+              <div>
+                <strong style="color:#ffffff;font-size:0.95rem;">FieldRoot Herbal Cosmetics Purity Oath</strong>
+                <div style="font-size:0.8rem;color:#f0dfd1;">Zero sulfates • Zero synthetic fragrances • 100% Farmer fair trade</div>
+              </div>
+              <div style="font-size:0.8rem;color:#d4af37;font-weight:600;">
+                Verified Pune Laboratory
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center;padding:50px;">
+            <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+            <h3>Batch Not Found</h3>
+            <p style="color:#777;margin-bottom:18px;">${err.message}</p>
+            <a href="/marketplace.html" class="btn btn-outline">Browse Verified Harvests</a>
+          </div>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>

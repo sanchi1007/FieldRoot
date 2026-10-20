@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Earnings & Sourcing Analytics — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container">
+      <div style="margin-bottom:28px;">
+        <span class="badge badge-organic" style="margin-bottom:6px;">Financial Transparency</span>
+        <h2 style="font-size:2rem;margin:0;">Earnings & Fair Trade Analytics</h2>
+        <p style="color:#6e5e5b;margin:4px 0 0;font-size:0.95rem;">
+          Track revenue disbursements, monthly earnings trends, and fair-price bonuses over APMC mandi rates.
+        </p>
+      </div>
+
+      <!-- Farmer Earnings Section -->
+      <div id="farmer-earnings-view">
+        <!-- KPI Cards -->
+        <div class="stats-grid" style="margin-top:0;margin-bottom:30px;">
+          <div class="stat-card" style="border-left:5px solid var(--color-leaf);text-align:left;">
+            <div class="stat-label">Total Realized Earnings</div>
+            <div id="fe-total-earned" class="stat-number" style="color:var(--color-leaf);">₹0</div>
+            <div style="font-size:0.8rem;color:#777;">Disbursed directly via NEFT</div>
+          </div>
+
+          <div class="stat-card" style="border-left:5px solid var(--color-caramel);text-align:left;">
+            <div class="stat-label">Pending / Escrow Payouts</div>
+            <div id="fe-pending-earned" class="stat-number" style="color:var(--color-caramel);">₹0</div>
+            <div style="font-size:0.8rem;color:#777;">On delivered & dispatched batches</div>
+          </div>
+
+          <div class="stat-card" style="border-left:5px solid var(--color-primary);text-align:left;">
+            <div class="stat-label">Completed Orders</div>
+            <div id="fe-completed-orders" class="stat-number" style="color:var(--color-primary);">0</div>
+            <div style="font-size:0.8rem;color:#777;">Paid in full</div>
+          </div>
+
+          <div class="stat-card" style="border-left:5px solid var(--color-chocolate);text-align:left;">
+            <div class="stat-label">Average Price Premium</div>
+            <div class="stat-number" style="color:var(--color-chocolate);">+32%</div>
+            <div style="font-size:0.8rem;color:#777;">Over APMC Mandi rates</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-bottom:30px;" id="earnings-graphs-grid">
+          <!-- Monthly Earnings Chart (Pure Canvas / CSS) -->
+          <div class="card">
+            <h3 style="font-size:1.2rem;margin-bottom:6px;">📈 Monthly Earnings Trend (Last 6 Months)</h3>
+            <p style="font-size:0.85rem;color:#777;margin-bottom:20px;">Direct income paid into farmer account</p>
+            <div id="monthly-chart-container" style="display:flex;align-items:flex-end;justify-content:space-between;height:220px;padding:20px 10px 0;border-bottom:2px solid var(--color-sand);">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Price You Got vs Average Mandi Price -->
+          <div class="card">
+            <h3 style="font-size:1.2rem;margin-bottom:6px;">⚖️ Price You Got vs. Average Mandi Price</h3>
+            <p style="font-size:0.85rem;color:#777;margin-bottom:20px;">Comparing FieldRoot direct rate against APMC wholesale trader benchmark</p>
+            <div id="mandi-comparison-list" style="display:flex;flex-direction:column;gap:14px;">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Company Procurement Analytics Section (Shown for Company or Admin) -->
+      <div id="company-analytics-view" style="display:none;">
+        <div class="card" style="margin-bottom:30px;background:linear-gradient(135deg, #ffffff 0%, #faf3eb 100%);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+            <div>
+              <span class="badge badge-grade-a">Procurement Intelligence</span>
+              <h3 style="font-size:1.4rem;margin:4px 0 0;">Company Sourcing Volume & Middleman Savings</h3>
+            </div>
+            <div class="badge badge-organic" style="font-size:0.95rem;padding:8px 14px;">
+              💰 Direct Sourcing Advantage
+            </div>
+          </div>
+
+          <div class="stats-grid" style="margin-top:0;">
+            <div class="stat-card">
+              <div id="comp-total-vol" class="stat-number">0 kg</div>
+              <div class="stat-label">Total Volume Sourced</div>
+            </div>
+            <div class="stat-card">
+              <div id="comp-total-spend" class="stat-number" style="color:var(--color-leaf);">₹0</div>
+              <div class="stat-label">Procurement Capital Paid</div>
+            </div>
+            <div class="stat-card">
+              <div id="comp-savings" class="stat-number" style="color:var(--color-caramel);">₹0</div>
+              <div class="stat-label">Middleman Margins Saved (~28%)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sourcing by Ingredient Table -->
+        <div class="card" style="margin-bottom:30px;padding:0;overflow:hidden;">
+          <div style="padding:18px 24px;border-bottom:1px solid var(--color-sand);">
+            <h4 style="font-size:1.15rem;margin:0;">Cost & Volume Breakdown Per Herb</h4>
+          </div>
+          <div class="table-responsive" style="border:none;">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>Herb Name</th>
+                  <th>Quantity Sourced</th>
+                  <th>Total Spent</th>
+                  <th>Average Cost / Unit</th>
+                </tr>
+              </thead>
+              <tbody id="company-ingredients-tbody">
+                <tr><td colspan="4" style="text-align:center;padding:30px;color:#888;">Loading ingredient stats...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      if (!Auth.requireAuth()) return;
+      const user = Auth.getUser();
+
+      if (user.role === 'company' || user.role === 'admin') {
+        document.getElementById('company-analytics-view').style.display = 'block';
+        await loadCompanyAnalytics();
+      }
+
+      await loadFarmerEarnings();
+    });
+
+    async function loadFarmerEarnings() {
+      try {
+        const res = await API.get('/earnings/farmer');
+
+        if (res.summary) {
+          document.getElementById('fe-total-earned').textContent = `₹${res.summary.totalEarned.toLocaleString('en-IN')}`;
+          document.getElementById('fe-pending-earned').textContent = `₹${res.summary.pendingPayments.toLocaleString('en-IN')}`;
+          document.getElementById('fe-completed-orders').textContent = res.summary.completedOrdersCount;
+        }
+
+        // Render Monthly Chart
+        const chartBox = document.getElementById('monthly-chart-container');
+        if (res.monthlyEarnings && res.monthlyEarnings.length > 0) {
+          const maxAmount = Math.max(...res.monthlyEarnings.map(m => m.amount), 20000);
+
+          chartBox.innerHTML = res.monthlyEarnings.map(m => {
+            const heightPercent = Math.max(Math.round((m.amount / maxAmount) * 160), 12);
+            return `
+              <div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:6px;">
+                <div style="font-size:0.75rem;font-weight:600;color:var(--color-leaf);">
+                  ${m.amount > 0 ? '₹' + (m.amount / 1000).toFixed(0) + 'k' : ''}
+                </div>
+                <div style="width:36px;height:${heightPercent}px;background:linear-gradient(180deg, var(--color-leaf) 0%, #3e5a26 100%);border-radius:6px 6px 0 0;transition:height 0.4s ease;" title="${m.month}: ₹${m.amount}"></div>
+                <div style="font-size:0.75rem;color:#666;font-weight:500;">${m.month}</div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // Render Price Comparison
+        const compBox = document.getElementById('mandi-comparison-list');
+        if (res.priceComparison && res.priceComparison.length > 0) {
+          compBox.innerHTML = res.priceComparison.map(c => `
+            <div style="background:#faf5ee;padding:14px;border-radius:10px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.95rem;">
+                <strong>${c.cropName}</strong>
+                <span class="badge badge-organic">+${c.gainPercent}% Extra Profit</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:#666;">
+                <span>FieldRoot Direct Rate: <strong style="color:var(--color-leaf);">₹${c.farmerReceivedPrice}/${c.unit}</strong></span>
+                <span>Avg Mandi Rate: ₹${c.averageMandiPrice}/${c.unit}</span>
+              </div>
+              <div style="height:6px;background:#e5d8cb;border-radius:3px;margin-top:8px;overflow:hidden;">
+                <div style="width:${Math.min(100, Math.round((c.farmerReceivedPrice / (c.averageMandiPrice * 1.3)) * 100))}%;height:100%;background:var(--color-leaf);border-radius:3px;"></div>
+              </div>
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        console.warn('Earnings load error:', err);
+      }
+    }
+
+    async function loadCompanyAnalytics() {
+      try {
+        const res = await API.get('/earnings/company-analytics');
+        if (res.summary) {
+          document.getElementById('comp-total-vol').textContent = `${res.summary.totalVolumeSourced.toLocaleString('en-IN')} kg`;
+          document.getElementById('comp-total-spend').textContent = `₹${res.summary.totalProcurementSpend.toLocaleString('en-IN')}`;
+          document.getElementById('comp-savings').textContent = `₹${res.summary.middlemanMarginAvoided.toLocaleString('en-IN')}`;
+        }
+
+        const tbody = document.getElementById('company-ingredients-tbody');
+        if (res.ingredientStats && res.ingredientStats.length > 0) {
+          tbody.innerHTML = res.ingredientStats.map(item => `
+            <tr>
+              <td><strong>${item.cropName}</strong></td>
+              <td>${item.quantity.toLocaleString('en-IN')} ${item.unit}</td>
+              <td><strong>₹${item.totalSpend.toLocaleString('en-IN')}</strong></td>
+              <td><span class="badge badge-grade-a">₹${item.avgCostPerUnit} / ${item.unit}</span></td>
+            </tr>
+          `).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#888;">No completed procurements yet.</td></tr>';
+        }
+      } catch (err) {
+        console.warn('Company analytics load error:', err);
+      }
+    }
+  </script>
+</body>
+</html>

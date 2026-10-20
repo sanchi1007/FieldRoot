@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orders & Invoices — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:16px;">
+        <div>
+          <span class="badge badge-grade-a" style="margin-bottom:6px;">Transparent Fair Trade Tracking</span>
+          <h2 style="font-size:2rem;margin:0;">Orders, Negotiations & Invoices</h2>
+          <p style="color:#6e5e5b;margin:4px 0 0;font-size:0.95rem;">
+            Real-time status updates: Requested → Accepted → Dispatched → Delivered → Paid.
+          </p>
+        </div>
+
+        <!-- Filter by Status -->
+        <div>
+          <select id="orders-status-filter" class="form-control" style="width:auto;display:inline-block;">
+            <option value="all">All Order Statuses</option>
+            <option value="Requested">Requested (Negotiating)</option>
+            <option value="Accepted">Accepted</option>
+            <option value="Dispatched">Dispatched (In Transit)</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Paid">Paid & Completed</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Orders List Container -->
+      <div id="orders-list-container" style="display:flex;flex-direction:column;gap:24px;">
+        <div style="text-align:center;padding:50px;color:#888;">Loading orders...</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Counter-Offer Modal -->
+  <div id="counter-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Submit Counter-Offer</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('counter-modal')">&times;</button>
+      </div>
+      <form id="counter-form">
+        <div class="modal-body">
+          <input type="hidden" id="counter-order-id">
+          <div class="form-group">
+            <label class="form-label">Proposed New Price / Unit (₹) *</label>
+            <input type="number" id="counter-price-input" class="form-control" min="1" required>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Reason / Explanation *</label>
+            <textarea id="counter-note-input" class="form-control" rows="3" placeholder="e.g. This batch is certified Grade A shade-dried whole pods..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('counter-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit Counter-Offer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dispatch Modal (Farmer) -->
+  <div id="dispatch-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Mark Order as Dispatched</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('dispatch-modal')">&times;</button>
+      </div>
+      <form id="dispatch-form">
+        <div class="modal-body">
+          <input type="hidden" id="dispatch-order-id">
+          <div class="form-group">
+            <label class="form-label">Courier / Logistics Provider *</label>
+            <input type="text" id="dispatch-courier" class="form-control" placeholder="e.g. VRL Logistics / TCI Freight / Direct Truck" required>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">LR / Tracking Number *</label>
+            <input type="text" id="dispatch-tracking" class="form-control" placeholder="e.g. VRL-PUN-88192" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('dispatch-modal')">Cancel</button>
+          <button type="submit" class="btn btn-leaf">Confirm Dispatch</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Rate Farmer Modal (Company) -->
+  <div id="rate-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Rate Farmer & Verify Botanical Quality</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('rate-modal')">&times;</button>
+      </div>
+      <form id="rate-form">
+        <div class="modal-body">
+          <input type="hidden" id="rate-order-id">
+
+          <div class="form-group">
+            <label class="form-label">Overall Star Rating (1 to 5 Stars) *</label>
+            <select id="rate-stars" class="form-control" style="font-size:1.1rem;font-weight:700;">
+              <option value="5" selected>★★★★★ (5 Stars - Exceptional Quality)</option>
+              <option value="4">★★★★☆ (4 Stars - Good Standard)</option>
+              <option value="3">★★★☆☆ (3 Stars - Acceptable)</option>
+              <option value="2">★★☆☆☆ (2 Stars - Below Expectations)</option>
+              <option value="1">★☆☆☆☆ (1 Star - Defective)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Herb Purity (1-5)</label>
+              <input type="number" id="rate-purity" class="form-control" min="1" max="5" value="5">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Delivery Timeliness (1-5)</label>
+              <input type="number" id="rate-delivery" class="form-control" min="1" max="5" value="5">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Review Comment</label>
+            <textarea id="rate-comment" class="form-control" rows="3" placeholder="e.g. Moisture test came back at 9.2%, high active principles, excellent packaging in food-grade bags."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('rate-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit Trust Score Rating</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      if (!Auth.requireAuth()) return;
+
+      await loadOrders();
+
+      document.getElementById('orders-status-filter').addEventListener('change', (e) => {
+        loadOrders(e.target.value);
+      });
+
+      // Submit Counter Form
+      document.getElementById('counter-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const orderId = document.getElementById('counter-order-id').value;
+        const counterPrice = document.getElementById('counter-price-input').value;
+        const message = document.getElementById('counter-note-input').value;
+
+        try {
+          await API.post(`/orders/${orderId}/counter`, {
+            counterPricePerUnit: counterPrice,
+            message
+          });
+          showToast('Counter-offer submitted to buyer!', 'success');
+          closeModal('counter-modal');
+          await loadOrders();
+        } catch (err) {
+          showToast(err.message || 'Error submitting counter-offer', 'error');
+        }
+      });
+
+      // Submit Dispatch Form
+      document.getElementById('dispatch-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const orderId = document.getElementById('dispatch-order-id').value;
+        const courierName = document.getElementById('dispatch-courier').value;
+        const trackingNumber = document.getElementById('dispatch-tracking').value;
+
+        try {
+          await API.post(`/orders/${orderId}/dispatch`, { courierName, trackingNumber });
+          showToast('Order marked as Dispatched! Tracking shared with buyer.', 'success');
+          closeModal('dispatch-modal');
+          await loadOrders();
+        } catch (err) {
+          showToast(err.message || 'Error updating dispatch', 'error');
+        }
+      });
+
+      // Submit Rating Form
+      document.getElementById('rate-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const orderId = document.getElementById('rate-order-id').value;
+        const rating = document.getElementById('rate-stars').value;
+        const purityScore = document.getElementById('rate-purity').value;
+        const deliveryScore = document.getElementById('rate-delivery').value;
+        const comment = document.getElementById('rate-comment').value;
+
+        try {
+          await API.post(`/orders/${orderId}/rate`, {
+            rating,
+            purityScore,
+            deliveryScore,
+            comment
+          });
+          showToast('Rating submitted! Farmer trust score updated.', 'success');
+          closeModal('rate-modal');
+          await loadOrders();
+        } catch (err) {
+          showToast(err.message || 'Error submitting rating', 'error');
+        }
+      });
+    });
+
+    async function loadOrders(status = 'all') {
+      const container = document.getElementById('orders-list-container');
+      container.innerHTML = '<div style="text-align:center;padding:50px;color:#888;">Loading orders & invoices...</div>';
+
+      try {
+        const params = status !== 'all' ? { status } : {};
+        const res = await API.get('/orders', params);
+
+        if (!res.orders || res.orders.length === 0) {
+          container.innerHTML = `
+            <div class="card" style="text-align:center;padding:60px 20px;">
+              <div style="font-size:48px;margin-bottom:12px;">📦</div>
+              <h3>No Orders Found</h3>
+              <p style="color:#777;">You have no active orders in this view.</p>
+            </div>
+          `;
+          return;
+        }
+
+        const user = Auth.getUser();
+
+        container.innerHTML = res.orders.map(o => {
+          const isFarmer = user.role === 'farmer' || user.id === o.farmer?._id;
+          const otherPartyName = isFarmer
+            ? (o.buyer?.companyDetails?.companyName || o.buyer?.name || 'FieldRoot Buyer')
+            : (o.farmer?.name || 'Verified Farmer');
+
+          // Tracking progress stage
+          const stages = ['Requested', 'Accepted', 'Dispatched', 'Delivered', 'Paid'];
+          const currentStageIdx = stages.indexOf(o.status);
+
+          return `
+            <div class="card" style="padding:28px;border-top:4px solid var(--color-primary);">
+              <!-- Top Row: Order ID, Other Party & Badge -->
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;border-bottom:1px solid #f2e7db;padding-bottom:16px;">
+                <div>
+                  <span style="font-family:monospace;font-size:0.9rem;color:#777;">Order #${o.orderNumber}</span>
+                  <h3 style="font-size:1.35rem;margin:4px 0 2px;color:var(--color-primary);">${o.productName}</h3>
+                  <div style="font-size:0.85rem;color:#666;">
+                    ${isFarmer ? 'Buyer' : 'Farmer'}: <strong>${otherPartyName}</strong>
+                    ${!isFarmer && o.farmer?.trustScore ? ` • ★ ${o.farmer.trustScore} Trust Score` : ''}
+                  </div>
+                </div>
+
+                <div style="text-align:right;">
+                  <span class="badge badge-status badge-status-${o.status.toLowerCase()}" style="font-size:0.92rem;">
+                    Status: ${o.status}
+                  </span>
+                  <div style="font-size:0.78rem;color:#888;margin-top:4px;">
+                    Updated: ${new Date(o.updatedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                </div>
+              </div>
+
+              <!-- 5-Stage Order Tracking Pill Flow -->
+              <div class="order-timeline-track">
+                ${stages.map((stg, idx) => {
+                  const isDone = currentStageIdx >= idx;
+                  const isCurrent = currentStageIdx === idx;
+                  return `
+                    <div class="timeline-step ${isDone ? 'completed' : ''} ${isCurrent ? 'active' : ''}">
+                      <div class="timeline-step-circle">${isDone ? '✓' : idx + 1}</div>
+                      <div class="timeline-step-title">${stg}</div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+
+              <!-- Invoice Breakdown & Dispatch Details Grid -->
+              <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:24px;margin:20px 0;background:#faf6f0;padding:20px;border-radius:14px;">
+                <div>
+                  <h4 style="font-size:0.95rem;margin-bottom:10px;color:var(--color-primary);text-transform:uppercase;">
+                    Transparent Invoice Breakdown
+                  </h4>
+                  <div class="invoice-row" style="padding:6px 0;">
+                    <span>Volume Ordered</span>
+                    <strong>${o.quantity} ${o.unit} @ ₹${o.finalPricePerUnit}/${o.unit}</strong>
+                  </div>
+                  <div class="invoice-row" style="padding:6px 0;">
+                    <span>Subtotal (${isFarmer ? 'Your 100% Payout' : 'Farmer Receivable'})</span>
+                    <strong style="color:var(--color-leaf);">₹${o.subtotal.toLocaleString('en-IN')}</strong>
+                  </div>
+                  <div class="invoice-row" style="padding:6px 0;">
+                    <span>Platform Commission (2.5%)</span>
+                    <span>₹${o.commissionAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div class="invoice-row total" style="padding-top:10px;margin-top:6px;">
+                    <span>Total Buyer Payable</span>
+                    <span>₹${o.totalBuyerPayable.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                <div style="border-left:1px dashed var(--color-sand);padding-left:20px;">
+                  <h4 style="font-size:0.95rem;margin-bottom:10px;color:var(--color-primary);text-transform:uppercase;">
+                    Logistics & Delivery
+                  </h4>
+                  <div style="font-size:0.85rem;color:#555;margin-bottom:8px;">
+                    📍 <strong>Destination:</strong> ${o.deliveryAddress || 'FieldRoot Central Hub, Pune'}
+                  </div>
+                  ${o.dispatchDetails && o.dispatchDetails.trackingNumber ? `
+                    <div style="font-size:0.85rem;color:#555;margin-bottom:6px;">
+                      🚚 <strong>Courier:</strong> ${o.dispatchDetails.courierName}
+                    </div>
+                    <div style="font-size:0.85rem;color:#555;">
+                      🔖 <strong>Tracking #:</strong> <span style="font-family:monospace;font-weight:700;">${o.dispatchDetails.trackingNumber}</span>
+                    </div>
+                  ` : `
+                    <div style="font-size:0.82rem;color:#888;font-style:italic;">
+                      Awaiting courier dispatch details from farmer.
+                    </div>
+                  `}
+                </div>
+              </div>
+
+              <!-- Negotiation History (if any) -->
+              ${o.negotiationHistory && o.negotiationHistory.length > 0 ? `
+                <div style="margin-bottom:18px;">
+                  <h4 style="font-size:0.85rem;color:var(--color-primary);margin-bottom:8px;text-transform:uppercase;">
+                    Negotiation Thread
+                  </h4>
+                  <div style="display:flex;flex-direction:column;gap:6px;">
+                    ${o.negotiationHistory.map(n => `
+                      <div style="background:#ffffff;padding:8px 12px;border-radius:8px;border:1px solid #ebd9c8;font-size:0.85rem;">
+                        <strong>${n.senderRole === 'farmer' ? '👨🏽‍🌾 Farmer' : '🏢 Buyer'}:</strong>
+                        <span>₹${n.pricePerUnit}/${o.unit}</span> — <em>"${n.message}"</em>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Action Controls depending on Role & Status -->
+              <div style="display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;border-top:1px solid #f2e7db;padding-top:16px;">
+                <!-- Farmer Actions -->
+                ${isFarmer && o.status === 'Requested' ? `
+                  <button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${o._id}', 'Accepted')">
+                    ✓ Accept Order (₹${o.finalPricePerUnit}/${o.unit})
+                  </button>
+                  <button class="btn btn-caramel btn-sm" onclick="openCounterModal('${o._id}', ${o.finalPricePerUnit})">
+                    🔄 Counter-Offer Price
+                  </button>
+                  <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;" onclick="updateOrderStatus('${o._id}', 'Rejected')">
+                    Reject
+                  </button>
+                ` : ''}
+
+                ${isFarmer && o.status === 'Accepted' ? `
+                  <button class="btn btn-leaf btn-sm" onclick="openDispatchModal('${o._id}')">
+                    🚚 Mark as Dispatched
+                  </button>
+                ` : ''}
+
+                <!-- Company Buyer Actions -->
+                ${!isFarmer && o.status === 'Requested' && o.counterPricePerUnit ? `
+                  <button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${o._id}', 'Accepted')">
+                    ✓ Accept Farmer's Counter Rate (₹${o.counterPricePerUnit})
+                  </button>
+                ` : ''}
+
+                ${!isFarmer && o.status === 'Dispatched' ? `
+                  <button class="btn btn-leaf btn-sm" onclick="updateOrderStatus('${o._id}', 'Delivered')">
+                    ✓ Confirm Receipt at Warehouse (Delivered)
+                  </button>
+                ` : ''}
+
+                ${!isFarmer && o.status === 'Delivered' ? `
+                  <button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${o._id}', 'Paid')">
+                    💳 Release Direct NEFT Payment (₹${o.farmerReceivable})
+                  </button>
+                ` : ''}
+
+                ${!isFarmer && (o.status === 'Delivered' || o.status === 'Paid') && !o.isRated ? `
+                  <button class="btn btn-caramel btn-sm" onclick="openRateModal('${o._id}')">
+                    ★ Rate Farmer Quality & Build Trust Score
+                  </button>
+                ` : ''}
+
+                <a href="/chat.html?contact=${isFarmer ? o.buyer?._id : o.farmer?._id}&order=${o._id}" class="btn btn-outline btn-sm">
+                  💬 Chat
+                </a>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = `<div style="text-align:center;padding:50px;color:red;">Error: ${err.message}</div>`;
+      }
+    }
+
+    async function updateOrderStatus(orderId, status) {
+      try {
+        await API.patch(`/orders/${orderId}/status`, { status });
+        showToast(`Order status updated to ${status}`, 'success');
+        await loadOrders();
+      } catch (err) {
+        showToast(err.message || 'Error updating order', 'error');
+      }
+    }
+
+    function openCounterModal(orderId, currentPrice) {
+      document.getElementById('counter-order-id').value = orderId;
+      document.getElementById('counter-price-input').value = currentPrice;
+      document.getElementById('counter-modal').classList.add('show');
+    }
+
+    function openDispatchModal(orderId) {
+      document.getElementById('dispatch-order-id').value = orderId;
+      document.getElementById('dispatch-modal').classList.add('show');
+    }
+
+    function openRateModal(orderId) {
+      document.getElementById('rate-order-id').value = orderId;
+      document.getElementById('rate-modal').classList.add('show');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('show');
+    }
+  </script>
+</body>
+</html>

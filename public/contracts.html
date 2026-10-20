@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pre-Season Contract Farming — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:16px;">
+        <div>
+          <span class="badge badge-grade-a" style="margin-bottom:6px;">Pre-Season Guaranteed Buyback</span>
+          <h2 style="font-size:2rem;margin:0;">Contract Farming Agreements</h2>
+          <p style="color:#6e5e5b;margin:4px 0 0;font-size:0.95rem;">
+            Lock in guaranteed prices before sowing. 20% mobilization advance credited directly to farmer bank accounts.
+          </p>
+        </div>
+
+        <div style="display:flex;gap:10px;">
+          <button id="post-contract-btn" class="btn btn-primary" onclick="openPostContractModal()" style="display:none;">
+            + Post New Contract
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabs: Open Contracts vs My Contracts -->
+      <div style="display:flex;gap:12px;margin-bottom:24px;border-bottom:2px solid var(--color-sand);padding-bottom:12px;">
+        <button id="tab-open-contracts" class="btn btn-primary btn-sm" onclick="switchContractTab('open')">
+          📢 Open Contracts for Farmers
+        </button>
+        <button id="tab-my-contracts" class="btn btn-outline btn-sm" onclick="switchContractTab('my')">
+          📑 My Contracts & Milestones
+        </button>
+      </div>
+
+      <!-- Contracts Grid -->
+      <div id="contracts-container" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(360px, 1fr));gap:24px;">
+        <div style="text-align:center;padding:50px;color:#888;grid-column:1/-1;">Loading contract agreements...</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Post Contract Modal (Company / Admin) -->
+  <div id="post-contract-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Post New Pre-Season Sourcing Contract</h3>
+        <button type="button" class="modal-close-btn" onclick="closePostContractModal()">&times;</button>
+      </div>
+      <form id="post-contract-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Contract Title *</label>
+            <input type="text" id="con-title" class="form-control" placeholder="e.g. Rabi 2026 Guaranteed Sourcing: Aloe Vera Barbadensis" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Crop Name *</label>
+              <input type="text" id="con-crop" class="form-control" placeholder="e.g. Aloe Vera" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select id="con-category" class="form-control">
+                <option value="hair care">Hair Care</option>
+                <option value="skin care" selected>Skin Care</option>
+                <option value="health and wellness">Health & Wellness</option>
+                <option value="flowers">Flowers</option>
+                <option value="herbs">Herbs</option>
+                <option value="oils">Oils</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Required Quantity *</label>
+              <input type="number" id="con-qty" class="form-control" placeholder="e.g. 1500" min="1" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Unit</label>
+              <select id="con-unit" class="form-control">
+                <option value="kg" selected>Kilograms (kg)</option>
+                <option value="quintal">Quintal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Guaranteed Price / Unit (₹) *</label>
+              <input type="number" id="con-price" class="form-control" placeholder="e.g. 40" min="1" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Advance Mobilization (%)</label>
+              <input type="number" id="con-advance" class="form-control" value="20" min="5" max="50">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Target Delivery Date *</label>
+              <input type="date" id="con-delivery-date" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Quality Specifications & Organic Standards</label>
+            <textarea id="con-specs" class="form-control" rows="3" placeholder="e.g. Grade A mature leaves > 600g each, zero synthetic chemical sprays, shade dried..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closePostContractModal()">Cancel</button>
+          <button type="submit" id="post-con-submit-btn" class="btn btn-primary">
+            Publish Pre-Season Contract →
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    let activeTab = 'open';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      const user = Auth.getUser();
+      if (user && (user.role === 'company' || user.role === 'admin')) {
+        document.getElementById('post-contract-btn').style.display = 'inline-flex';
+      }
+
+      await loadContracts('open');
+
+      document.getElementById('post-contract-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('con-title').value.trim();
+        const cropName = document.getElementById('con-crop').value.trim();
+        const category = document.getElementById('con-category').value;
+        const requiredQuantity = Number(document.getElementById('con-qty').value);
+        const unit = document.getElementById('con-unit').value;
+        const pricePerUnit = Number(document.getElementById('con-price').value);
+        const advancePercentage = Number(document.getElementById('con-advance').value);
+        const targetDeliveryDate = document.getElementById('con-delivery-date').value;
+        const specifications = document.getElementById('con-specs').value.trim();
+
+        const btn = document.getElementById('post-con-submit-btn');
+        btn.disabled = true;
+        btn.textContent = 'Publishing...';
+
+        try {
+          await API.post('/contracts', {
+            title,
+            cropName,
+            category,
+            requiredQuantity,
+            unit,
+            pricePerUnit,
+            advancePercentage,
+            targetDeliveryDate,
+            specifications
+          });
+          showToast('Pre-season contract published!', 'success');
+          closePostContractModal();
+          await loadContracts('open');
+        } catch (err) {
+          showToast(err.message || 'Error posting contract', 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Publish Pre-Season Contract →';
+        }
+      });
+    });
+
+    function switchContractTab(tab) {
+      activeTab = tab;
+      const tabOpen = document.getElementById('tab-open-contracts');
+      const tabMy = document.getElementById('tab-my-contracts');
+
+      if (tab === 'open') {
+        tabOpen.className = 'btn btn-primary btn-sm';
+        tabMy.className = 'btn btn-outline btn-sm';
+        loadContracts('open');
+      } else {
+        tabMy.className = 'btn btn-primary btn-sm';
+        tabOpen.className = 'btn btn-outline btn-sm';
+        loadContracts('my');
+      }
+    }
+
+    async function loadContracts(type) {
+      const container = document.getElementById('contracts-container');
+      container.innerHTML = '<div style="text-align:center;padding:50px;color:#888;grid-column:1/-1;">Loading contracts...</div>';
+
+      try {
+        const endpoint = type === 'my' ? '/contracts/my' : '/contracts?status=open';
+        const res = await API.get(endpoint);
+
+        if (!res.contracts || res.contracts.length === 0) {
+          container.innerHTML = `
+            <div style="text-align:center;padding:60px 20px;grid-column:1/-1;">
+              <div style="font-size:48px;margin-bottom:12px;">📑</div>
+              <h3>${type === 'my' ? 'No Active Contracts' : 'No Open Contracts at Present'}</h3>
+              <p style="color:#777;">
+                ${type === 'my' ? 'Accept an open pre-season contract below to start farming with guaranteed buyback!' : 'Check back soon as FieldRoot publishes upcoming seasonal procurement demands.'}
+              </p>
+            </div>
+          `;
+          return;
+        }
+
+        const user = Auth.getUser();
+
+        container.innerHTML = res.contracts.map(c => {
+          const totalVal = c.totalContractValue || (c.requiredQuantity * c.pricePerUnit);
+          const advanceVal = c.advanceAmount || ((totalVal * (c.advancePercentage || 20)) / 100);
+          const targetDateStr = new Date(c.targetDeliveryDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' });
+
+          return `
+            <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;border-top:4px solid ${c.status === 'open' ? 'var(--color-caramel)' : 'var(--color-leaf)'};">
+              <div>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                  <span class="badge ${c.status === 'open' ? 'badge-grade-a' : 'badge-organic'}">
+                    ${c.status === 'open' ? '📢 Open for Acceptance' : '✓ Active Contract'}
+                  </span>
+                  <span style="font-size:0.8rem;color:#777;">Due: ${targetDateStr}</span>
+                </div>
+
+                <h3 style="font-size:1.25rem;margin-bottom:6px;color:var(--color-primary);">${c.title}</h3>
+                <div style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:14px;">
+                  Crop: <strong>${c.cropName}</strong> • Category: <span style="text-transform:capitalize;">${c.category}</span>
+                </div>
+
+                <!-- Terms Banner -->
+                <div style="background:#faf5ee;padding:14px;border-radius:10px;margin-bottom:16px;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:0.85rem;color:#666;">Required Volume</span>
+                    <strong>${c.requiredQuantity} ${c.unit}</strong>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:0.85rem;color:#666;">Guaranteed Fair Price</span>
+                    <strong style="color:var(--color-leaf);">₹${c.pricePerUnit} / ${c.unit}</strong>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:0.85rem;color:#666;">Total Contract Value</span>
+                    <strong>₹${totalVal.toLocaleString('en-IN')}</strong>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;padding-top:6px;border-top:1px dashed #e4d5c7;">
+                    <span style="font-size:0.85rem;color:var(--color-primary);font-weight:600;">
+                      ⚡ ${c.advancePercentage || 20}% Mobilization Advance:
+                    </span>
+                    <strong style="color:var(--color-caramel);">₹${advanceVal.toLocaleString('en-IN')}</strong>
+                  </div>
+                </div>
+
+                <div style="font-size:0.85rem;color:#555;margin-bottom:16px;">
+                  <strong>QC Specifications:</strong> ${c.specifications || 'Standard Grade A organic herbs.'}
+                </div>
+
+                <!-- 5-Stage Delivery Timeline (If Accepted) -->
+                ${c.timeline && c.timeline.length > 0 ? `
+                  <div style="margin-bottom:18px;">
+                    <div style="font-size:0.82rem;font-weight:600;color:var(--color-primary);margin-bottom:8px;text-transform:uppercase;">
+                      Delivery Timeline Milestones
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:6px;">
+                      ${c.timeline.map((step, sIdx) => `
+                        <div style="display:flex;align-items:center;gap:8px;font-size:0.8rem;">
+                          <span style="width:16px;height:16px;border-radius:50%;background:${step.completed ? 'var(--color-leaf)' : '#e2d5c8'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">
+                            ${step.completed ? '✓' : sIdx + 1}
+                          </span>
+                          <span style="color:${step.completed ? 'var(--color-leaf)' : '#555'};font-weight:${step.completed ? '600' : '400'};">
+                            ${step.stage}
+                          </span>
+                          ${step.completed ? '<span style="font-size:0.75rem;color:#888;">(Done)</span>' : ''}
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- Action Buttons -->
+              <div>
+                ${c.status === 'open' && (!user || user.role === 'farmer') ? `
+                  <button class="btn btn-primary btn-lg" style="width:100%;" onclick="acceptContract('${c._id}', '${c.title}')">
+                    🤝 Accept Contract & Lock 20% Advance
+                  </button>
+                ` : `
+                  <div style="font-size:0.85rem;color:#666;text-align:center;padding:8px;background:#f8f4ee;border-radius:8px;">
+                    Accepted by: <strong>${c.acceptedFarmer?.name || 'Registered Farmer'}</strong>
+                  </div>
+                `}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = `<div style="text-align:center;padding:50px;color:red;grid-column:1/-1;">Error: ${err.message}</div>`;
+      }
+    }
+
+    async function acceptContract(contractId, contractTitle) {
+      if (!Auth.isLoggedIn()) {
+        sessionStorage.setItem('redirect_after_login', '/contracts.html');
+        window.location.href = '/login.html';
+        return;
+      }
+
+      if (!confirm(`Do you wish to accept contract "${contractTitle}"? 20% advance mobilization will be scheduled.`)) return;
+
+      try {
+        await API.post(`/contracts/${contractId}/accept`, {});
+        showToast('Congratulations! Contract accepted. Order generated.', 'success');
+        switchContractTab('my');
+      } catch (err) {
+        showToast(err.message || 'Error accepting contract', 'error');
+      }
+    }
+
+    function openPostContractModal() {
+      document.getElementById('post-contract-modal').classList.add('show');
+    }
+
+    function closePostContractModal() {
+      document.getElementById('post-contract-modal').classList.remove('show');
+    }
+  </script>
+</body>
+</html>

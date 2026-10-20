@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Herbal Marketplace — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:30px;">
+    <div class="container">
+      <!-- Title & Search Hero -->
+      <div style="margin-bottom:28px;">
+        <span class="badge badge-organic" style="margin-bottom:6px;">Direct Verified Sourcing</span>
+        <h2 style="font-size:2rem;margin:0;">Herbal Botanical Marketplace</h2>
+        <p style="color:#6e5e5b;margin:4px 0 0;font-size:0.95rem;">
+          Connect directly with verified organic growers across India. Zero middleman markup.
+        </p>
+      </div>
+
+      <!-- Multifaceted Filter Controls Bar -->
+      <div class="card" style="padding:22px;margin-bottom:30px;background:#ffffff;">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:14px;align-items:end;" id="filter-bar-grid">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" style="font-size:0.82rem;">Search Crop / Herb</label>
+            <input type="text" id="filter-search" class="form-control" placeholder="Search Reetha, Shikakai, Neem, Aloe...">
+          </div>
+
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" style="font-size:0.82rem;">Category</label>
+            <select id="filter-category" class="form-control">
+              <option value="all">All Categories</option>
+              <option value="hair care">Hair Care</option>
+              <option value="skin care">Skin Care</option>
+              <option value="health and wellness">Health & Wellness</option>
+              <option value="oils">Aromatic Oils</option>
+              <option value="flowers">Flowers</option>
+              <option value="herbs">Herbs</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" style="font-size:0.82rem;">State</label>
+            <select id="filter-state" class="form-control">
+              <option value="">All States</option>
+              <option value="Maharashtra">Maharashtra</option>
+              <option value="Gujarat">Gujarat</option>
+              <option value="Tamil Nadu">Tamil Nadu</option>
+              <option value="Rajasthan">Rajasthan</option>
+              <option value="Punjab">Punjab</option>
+              <option value="Madhya Pradesh">Madhya Pradesh</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" style="font-size:0.82rem;">Grade Standard</label>
+            <select id="filter-grade" class="form-control">
+              <option value="">All Grades</option>
+              <option value="Grade A">Grade A (Prime Export)</option>
+              <option value="Grade B">Grade B (Standard)</option>
+            </select>
+          </div>
+
+          <div>
+            <button id="apply-filters-btn" class="btn btn-primary" style="height:46px;">
+              Filter 🔍
+            </button>
+          </div>
+        </div>
+
+        <!-- Secondary Filter Tags Row -->
+        <div style="display:flex;align-items:center;gap:16px;margin-top:16px;padding-top:14px;border-top:1px solid #f2e7db;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="filter-organic-only" style="width:16px;height:16px;accent-color:var(--color-leaf);">
+            <label for="filter-organic-only" style="font-size:0.88rem;cursor:pointer;margin:0;font-weight:500;">
+              🌱 Certified Organic Only
+            </label>
+          </div>
+
+          <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:0.85rem;color:#777;">Sort:</span>
+            <select id="filter-sort" class="form-control" style="width:auto;padding:6px 12px;font-size:0.85rem;">
+              <option value="-createdAt">Newest First</option>
+              <option value="pricePerUnit">Price: Low to High</option>
+              <option value="-pricePerUnit">Price: High to Low</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Products Grid -->
+      <div id="marketplace-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:26px;">
+        <div style="text-align:center;padding:50px;color:#888;grid-column:1/-1;">Loading marketplace listings...</div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      // Check query param for pre-filled search
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('search')) {
+        document.getElementById('filter-search').value = urlParams.get('search');
+      }
+      if (urlParams.get('category')) {
+        document.getElementById('filter-category').value = urlParams.get('category');
+      }
+
+      await fetchMarketplace();
+
+      document.getElementById('apply-filters-btn').addEventListener('click', fetchMarketplace);
+      document.getElementById('filter-sort').addEventListener('change', fetchMarketplace);
+      document.getElementById('filter-organic-only').addEventListener('change', fetchMarketplace);
+      document.getElementById('filter-search').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') fetchMarketplace();
+      });
+    });
+
+    async function fetchMarketplace() {
+      const search = document.getElementById('filter-search').value.trim();
+      const category = document.getElementById('filter-category').value;
+      const state = document.getElementById('filter-state').value;
+      const qualityGrade = document.getElementById('filter-grade').value;
+      const sort = document.getElementById('filter-sort').value;
+      const isOrganic = document.getElementById('filter-organic-only').checked;
+
+      const params = { status: 'available', sort };
+      if (search) params.search = search;
+      if (category && category !== 'all') params.category = category;
+      if (state) params.state = state;
+      if (qualityGrade) params.qualityGrade = qualityGrade;
+      if (isOrganic) params.isOrganic = 'true';
+
+      const grid = document.getElementById('marketplace-grid');
+      grid.innerHTML = '<div style="text-align:center;padding:50px;color:#888;grid-column:1/-1;">Searching herbal batches...</div>';
+
+      try {
+        const res = await API.get('/products', params);
+        if (!res.products || res.products.length === 0) {
+          grid.innerHTML = `
+            <div style="text-align:center;padding:60px 20px;grid-column:1/-1;">
+              <div style="font-size:48px;margin-bottom:12px;">🔍</div>
+              <h3>No Matching Harvests Found</h3>
+              <p style="color:#777;margin-bottom:20px;">Try adjusting search keywords or filters.</p>
+              <button class="btn btn-outline" onclick="resetFilters()">Reset All Filters</button>
+            </div>
+          `;
+          return;
+        }
+
+        grid.innerHTML = res.products.map(p => `
+          <div class="product-card">
+            <div class="product-img-wrap">
+              <img src="${p.images && p.images[0] ? p.images[0] : '/images/placeholder_herb.jpg'}" alt="${p.name}">
+              <div class="badge-overlay-top">
+                <span class="badge ${p.isOrganic ? 'badge-organic' : 'badge-grade-b'}">
+                  ${p.isOrganic ? '🌱 100% Organic' : 'Natural'}
+                </span>
+                <span class="badge badge-grade-a">${p.qualityGrade ? p.qualityGrade.split(' ')[0] + ' ' + p.qualityGrade.split(' ')[1] : 'Grade A'}</span>
+              </div>
+            </div>
+            <div class="product-body">
+              <div class="product-category-tag">${p.category}</div>
+              <h3 class="product-title">
+                <a href="/product-detail.html?id=${p._id}">${p.name}</a>
+              </h3>
+              ${p.botanicalName ? `<div class="product-botanical">${p.botanicalName}</div>` : ''}
+
+              <div class="product-farmer-meta">
+                <div class="farmer-avatar-sm">${p.farmer?.name ? p.farmer.name[0] : 'F'}</div>
+                <div class="farmer-info-sm">
+                  <h5>${p.farmer?.name || 'Verified Farmer'}</h5>
+                  <p>${p.farmer?.district || ''}, ${p.farmer?.state || ''} • ★ ${p.farmer?.trustScore || 5.0}</p>
+                </div>
+              </div>
+
+              <div class="product-price-row">
+                <div>
+                  <div class="product-price">₹${p.pricePerUnit} <span style="font-size:0.8rem;color:#888;">/${p.unit}</span></div>
+                  <div class="product-qty-avail">${p.quantity} ${p.unit} in stock</div>
+                </div>
+                <a href="/product-detail.html?id=${p._id}" class="btn btn-primary btn-sm">
+                  Buy / View →
+                </a>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        grid.innerHTML = `<div style="text-align:center;padding:50px;color:red;grid-column:1/-1;">Error: ${err.message}</div>`;
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-search').value = '';
+      document.getElementById('filter-category').value = 'all';
+      document.getElementById('filter-state').value = '';
+      document.getElementById('filter-grade').value = '';
+      document.getElementById('filter-organic-only').checked = false;
+      fetchMarketplace();
+    }
+  </script>
+</body>
+</html>

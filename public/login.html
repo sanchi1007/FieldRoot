@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — FieldRoot Connect</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="main-content" style="padding-top:40px;">
+    <div class="container container-narrow">
+      <div class="card" style="max-width:500px;margin:0 auto;padding:36px;">
+        <div style="text-align:center;margin-bottom:28px;">
+          <div class="brand-icon" style="margin:0 auto 14px;width:52px;height:52px;font-size:26px;">🌿</div>
+          <h2 style="font-size:1.8rem;margin-bottom:6px;">Welcome Back</h2>
+          <p style="color:#6e5e5b;font-size:0.92rem;">Log in to access your farm portal, orders, and contracts</p>
+        </div>
+
+        <form id="login-form">
+          <div class="form-group">
+            <label class="form-label">Phone Number (मोबाइल नंबर)</label>
+            <input type="tel" id="login-phone" class="form-control" placeholder="e.g. 9421055501" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Password (पासवर्ड)</label>
+            <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required>
+          </div>
+
+          <button type="submit" id="login-submit-btn" class="btn btn-primary btn-lg" style="width:100%;margin-top:10px;">
+            Log In →
+          </button>
+        </form>
+
+        <!-- Demo Accounts Helper -->
+        <div style="margin-top:28px;padding-top:20px;border-top:1px dashed var(--color-sand);">
+          <div style="font-size:0.82rem;font-weight:600;color:var(--color-primary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;text-align:center;">
+            ⚡ Quick Demo Accounts (One-Click Fill)
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="fillDemo('9421055501', 'password123')">
+              👨🏽‍🌾 Farmer (MH)
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="fillDemo('9825012345', 'password123')">
+              🌱 Farmer (GJ)
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="fillDemo('9822011223', 'password123')">
+              🏢 FieldRoot Buyer
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="fillDemo('9876543210', 'password123')">
+              🛡️ Admin
+            </button>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin-top:24px;font-size:0.9rem;color:#6e5e5b;">
+          Don't have an account? <a href="/register.html" style="font-weight:600;color:var(--color-primary);">Register here</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+    function fillDemo(phone, pass) {
+      document.getElementById('login-phone').value = phone;
+      document.getElementById('login-password').value = pass;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await I18N.init();
+      Nav.init();
+
+      if (Auth.isLoggedIn()) {
+        const u = Auth.getUser();
+        window.location.href = u && u.role === 'farmer' ? '/farmer-dashboard.html' : '/marketplace.html';
+      }
+
+      const form = document.getElementById('login-form');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const phone = document.getElementById('login-phone').value.trim();
+        const password = document.getElementById('login-password').value;
+        const btn = document.getElementById('login-submit-btn');
+
+        btn.disabled = true;
+        btn.textContent = 'Logging in...';
+
+        try {
+          const res = await API.post('/auth/login', { phone, password });
+          Auth.setSession(res.token, res.user);
+          showToast(`Welcome back, ${res.user.name}!`, 'success');
+
+          // Sync language with user's preferredLanguage
+          if (res.user.preferredLanguage) {
+            await I18N.setLanguage(res.user.preferredLanguage);
+          }
+
+          const redirect = sessionStorage.getItem('redirect_after_login');
+          sessionStorage.removeItem('redirect_after_login');
+
+          setTimeout(() => {
+            if (redirect) {
+              window.location.href = redirect;
+            } else if (res.user.role === 'farmer') {
+              window.location.href = '/farmer-dashboard.html';
+            } else if (res.user.role === 'company') {
+              window.location.href = '/marketplace.html';
+            } else {
+              window.location.href = '/admin.html';
+            }
+          }, 800);
+        } catch (err) {
+          showToast(err.message || 'Login failed. Please check credentials.', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Log In →';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
