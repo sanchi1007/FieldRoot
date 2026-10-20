@@ -155,12 +155,15 @@ const Nav = {
       const firstName = user.name ? user.name.split(' ')[0] : 'User';
       desktopAuthHtml = `
         <div class="desktop-auth-actions">
-          <a href="/chat.html" class="btn btn-outline btn-sm nav-chat-btn" title="Chat">💬 <span class="desktop-only">Chat</span></a>
-          <div class="user-badge" style="display:flex;align-items:center;gap:8px;padding:4px 10px;background:#f5ece2;border-radius:20px;border:1px solid #e4d5c7;">
-            <span style="font-weight:600;font-size:0.85rem;color:#4a2c2a;">${escapeHtml(firstName)}</span>
+          <a href="/chat.html" class="nav-chat-btn" title="Chat">💬 <span class="desktop-only">Chat</span></a>
+          <div class="nav-user-badge">
+            <span class="nav-user-name">${escapeHtml(firstName)}</span>
             <span class="badge ${roleBadgeClass}" style="text-transform:capitalize;">${escapeHtml(user.role)}</span>
           </div>
-          <button id="nav-logout-btn" class="btn btn-outline btn-sm nav-logout-btn" style="border-color:#b33939;color:#b33939;">Logout</button>
+          <button id="nav-logout-btn" class="nav-logout-btn" title="Sign out of FieldRoot" aria-label="Logout">
+            <span class="logout-icon">🚪</span>
+            <span>Logout</span>
+          </button>
         </div>
       `;
       quickChatHtml = `
@@ -183,8 +186,8 @@ const Nav = {
     } else {
       desktopAuthHtml = `
         <div class="desktop-auth-actions">
-          <a href="/login.html" class="btn btn-outline btn-sm" data-i18n="nav_login">Login</a>
-          <a href="/register.html" class="btn btn-primary btn-sm" data-i18n="nav_register">Register</a>
+          <a href="/login.html" class="btn btn-outline btn-sm nav-auth-btn" data-i18n="nav_login">Login</a>
+          <a href="/register.html" class="btn btn-primary btn-sm nav-auth-btn" data-i18n="nav_register">Register</a>
         </div>
       `;
       mobileUserCardHtml = `
@@ -220,12 +223,16 @@ const Nav = {
             </div>
           </a>
 
-          <!-- Desktop Navigation Bar (hidden on <= 1180px) -->
-          <nav class="nav-desktop">
-            <a href="/index.html" class="nav-link ${currentPath === '/' || currentPath.includes('index') ? 'active' : ''}" data-i18n="nav_home">Home</a>
-            ${roleLinksDesktop}
-            ${commonLinksDesktop}
-          </nav>
+          <!-- Desktop Navigation Bar Carousel (hidden on <= 1180px) -->
+          <div class="nav-desktop-wrapper">
+            <button type="button" class="nav-scroll-arrow nav-scroll-prev" id="nav-scroll-prev" aria-label="Scroll options left">‹</button>
+            <nav class="nav-desktop" id="nav-desktop">
+              <a href="/index.html" class="nav-link ${currentPath === '/' || currentPath.includes('index') ? 'active' : ''}" data-i18n="nav_home">Home</a>
+              ${roleLinksDesktop}
+              ${commonLinksDesktop}
+            </nav>
+            <button type="button" class="nav-scroll-arrow nav-scroll-next" id="nav-scroll-next" aria-label="Scroll options right">›</button>
+          </div>
 
           <div class="header-actions">
             <!-- Language Selector Dropdown -->
@@ -528,6 +535,114 @@ const Nav = {
     window.addEventListener('fieldroot_lang_changed', () => {
       this.updateCurrentLangDisplay();
     });
+
+    // 6. Desktop Nav Horizontal Scroller (Mousewheel, Arrows & Drag)
+    const desktopNav = document.getElementById('nav-desktop');
+    const prevBtn = document.getElementById('nav-scroll-prev');
+    const nextBtn = document.getElementById('nav-scroll-next');
+
+    if (desktopNav) {
+      const updateScrollArrows = () => {
+        if (!prevBtn || !nextBtn) return;
+        const isOverflowing = desktopNav.scrollWidth > desktopNav.clientWidth + 2;
+        if (isOverflowing) {
+          prevBtn.classList.add('visible');
+          nextBtn.classList.add('visible');
+          prevBtn.disabled = desktopNav.scrollLeft <= 4;
+          nextBtn.disabled = desktopNav.scrollLeft + desktopNav.clientWidth >= desktopNav.scrollWidth - 4;
+        } else {
+          prevBtn.classList.remove('visible');
+          nextBtn.classList.remove('visible');
+        }
+      };
+
+      // Mousewheel scrolls ONLY the navbar options, NOT the entire page
+      desktopNav.addEventListener('wheel', (e) => {
+        if (desktopNav.scrollWidth > desktopNav.clientWidth) {
+          const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+          if (delta !== 0) {
+            e.preventDefault();
+            desktopNav.scrollLeft += delta;
+            updateScrollArrows();
+          }
+        }
+      }, { passive: false });
+
+      // Prev & Next arrow click handlers
+      if (prevBtn) {
+        prevBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          desktopNav.scrollBy({ left: -220, behavior: 'smooth' });
+        });
+      }
+      if (nextBtn) {
+        nextBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          desktopNav.scrollBy({ left: 220, behavior: 'smooth' });
+        });
+      }
+
+      // Drag to scroll
+      let isDown = false;
+      let startX = 0;
+      let scrollLeft = 0;
+      let hasDragged = false;
+
+      desktopNav.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        isDown = true;
+        hasDragged = false;
+        desktopNav.classList.add('grabbing');
+        startX = e.pageX - desktopNav.offsetLeft;
+        scrollLeft = desktopNav.scrollLeft;
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDown) {
+          isDown = false;
+          desktopNav.classList.remove('grabbing');
+        }
+      });
+
+      desktopNav.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - desktopNav.offsetLeft;
+        const walk = (x - startX) * 1.5;
+        if (Math.abs(walk) > 4) {
+          hasDragged = true;
+        }
+        desktopNav.scrollLeft = scrollLeft - walk;
+        updateScrollArrows();
+      });
+
+      desktopNav.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', (e) => {
+          if (hasDragged) {
+            e.preventDefault();
+            hasDragged = false;
+          }
+        });
+      });
+
+      desktopNav.addEventListener('scroll', updateScrollArrows);
+      window.addEventListener('resize', updateScrollArrows);
+
+      // Scroll active link into view
+      const activeLink = desktopNav.querySelector('.nav-link.active');
+      if (activeLink) {
+        setTimeout(() => {
+          activeLink.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          updateScrollArrows();
+        }, 120);
+      } else {
+        setTimeout(updateScrollArrows, 120);
+      }
+
+      window.addEventListener('fieldroot_lang_changed', () => {
+        setTimeout(updateScrollArrows, 120);
+      });
+    }
   },
 
   updateCurrentLangDisplay() {
