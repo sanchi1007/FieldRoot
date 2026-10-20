@@ -17,7 +17,7 @@
           <span class="badge badge-grade-a" style="margin-bottom:6px;">FieldRoot Governance</span>
           <h2 style="font-size:2rem;margin:0;">Platform Administration Panel</h2>
           <p style="color:#6e5e5b;margin:4px 0 0;font-size:0.95rem;">
-            Verify farmer accounts, moderate organic harvest listings, and configure platform commissions.
+            Verify farmer accounts, moderate organic harvest listings, monitor security logs, and configure commissions.
           </p>
         </div>
 
@@ -49,8 +49,8 @@
         </div>
       </div>
 
-      <!-- Tabs: Verify Farmers vs Moderate Products vs Master Ingredients -->
-      <div style="display:flex;gap:10px;margin-bottom:24px;">
+      <!-- Tabs: Verify Farmers vs Moderate Products vs Master Ingredients vs Security Audit -->
+      <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;">
         <button id="adm-tab-farmers" class="btn btn-primary btn-sm" onclick="switchAdminTab('farmers')">
           👨🏽‍🌾 Farmers Verification
         </button>
@@ -59,6 +59,9 @@
         </button>
         <button id="adm-tab-ingredients" class="btn btn-outline btn-sm" onclick="switchAdminTab('ingredients')">
           🧪 Master Ingredients (30+)
+        </button>
+        <button id="adm-tab-security" class="btn btn-outline btn-sm" onclick="switchAdminTab('security')">
+          🛡️ Security & Audit Logs
         </button>
       </div>
 
@@ -118,10 +121,12 @@
 
     async function switchAdminTab(tab) {
       currentAdminTab = tab;
-      ['farmers', 'products', 'ingredients'].forEach(t => {
+      ['farmers', 'products', 'ingredients', 'security'].forEach(t => {
         const btn = document.getElementById(`adm-tab-${t}`);
-        if (t === tab) btn.className = 'btn btn-primary btn-sm';
-        else btn.className = 'btn btn-outline btn-sm';
+        if (btn) {
+          if (t === tab) btn.className = 'btn btn-primary btn-sm';
+          else btn.className = 'btn btn-outline btn-sm';
+        }
       });
 
       const content = document.getElementById('admin-tab-content');
@@ -133,6 +138,8 @@
         await loadProductsModeration(content);
       } else if (tab === 'ingredients') {
         await loadMasterIngredients(content);
+      } else if (tab === 'security') {
+        await loadSecurityDashboard(content);
       }
     }
 
@@ -290,6 +297,82 @@
                       <td>₹${i.typicalPriceRange.min} - ₹${i.typicalPriceRange.max} / ${i.typicalPriceRange.unit}</td>
                     </tr>
                   `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        container.innerHTML = `<div style="color:red;padding:30px;">Error: ${err.message}</div>`;
+      }
+    }
+
+    async function loadSecurityDashboard(container) {
+      try {
+        const res = await API.get('/admin/security-audit');
+        const logs = res.logs || [];
+
+        container.innerHTML = `
+          <!-- Security Feature Status Grid -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px;margin-bottom:24px;">
+            <div class="card" style="padding:16px;border-left:4px solid var(--color-leaf);">
+              <div style="font-size:0.8rem;color:#777;text-transform:uppercase;font-weight:600;">HTTP Protection</div>
+              <strong style="font-size:1.1rem;color:var(--color-leaf);">✓ Helmet Active</strong>
+              <div style="font-size:0.78rem;color:#888;">CSP, HSTS, XSS Header, nosniff</div>
+            </div>
+
+            <div class="card" style="padding:16px;border-left:4px solid var(--color-leaf);">
+              <div style="font-size:0.8rem;color:#777;text-transform:uppercase;font-weight:600;">Brute Force Shield</div>
+              <strong style="font-size:1.1rem;color:var(--color-leaf);">✓ Rate Limiting Active</strong>
+              <div style="font-size:0.78rem;color:#888;">15 attempts / 15m on Auth</div>
+            </div>
+
+            <div class="card" style="padding:16px;border-left:4px solid var(--color-leaf);">
+              <div style="font-size:0.8rem;color:#777;text-transform:uppercase;font-weight:600;">Injection Defense</div>
+              <strong style="font-size:1.1rem;color:var(--color-leaf);">✓ NoSQL Sanitizer Active</strong>
+              <div style="font-size:0.78rem;color:#888;">MongoDB operator striping</div>
+            </div>
+
+            <div class="card" style="padding:16px;border-left:4px solid var(--color-leaf);">
+              <div style="font-size:0.8rem;color:#777;text-transform:uppercase;font-weight:600;">Input Sanitization</div>
+              <strong style="font-size:1.1rem;color:var(--color-leaf);">✓ XSS Defense Active</strong>
+              <div style="font-size:0.78rem;color:#888;">Script tag & event stripping</div>
+            </div>
+          </div>
+
+          <!-- Real-Time Security Audit Event Trail -->
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--color-sand);">
+              <h4 style="margin:0;font-size:1.1rem;">🔒 Security Audit Trail (Recent Activity Logs)</h4>
+              <button class="btn btn-outline btn-sm" onclick="switchAdminTab('security')">↻ Refresh Logs</button>
+            </div>
+            <div class="table-responsive" style="border:none;">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Event Type</th>
+                    <th>Client IP</th>
+                    <th>Method & Path</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${logs.length > 0 ? logs.map(l => `
+                    <tr>
+                      <td style="font-family:monospace;font-size:0.82rem;color:#777;">
+                        ${new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </td>
+                      <td>
+                        <span class="badge ${l.eventType.includes('SUCCESS') || l.eventType.includes('REGISTERED') ? 'badge-organic' : 'badge-status-requested'}">
+                          ${l.eventType}
+                        </span>
+                      </td>
+                      <td style="font-family:monospace;font-size:0.85rem;">${l.ip}</td>
+                      <td><code>${l.method || 'GET'} ${l.url || '-'}</code></td>
+                      <td style="font-size:0.85rem;color:#444;">${l.details}</td>
+                    </tr>
+                  `).join('') : '<tr><td colspan="5" style="text-align:center;padding:30px;color:#888;">No security events recorded yet.</td></tr>'}
                 </tbody>
               </table>
             </div>

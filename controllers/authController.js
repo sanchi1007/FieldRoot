@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { logSecurityEvent } = require('../middleware/security');
 
 // Helper to generate JWT token
 const sendTokenResponse = (user, statusCode, res) => {
@@ -36,9 +37,9 @@ const sendTokenResponse = (user, statusCode, res) => {
 };
 
 /**
- * @desc    Register a new user (farmer, company, admin)
+ * @desc    Register a new user (farmer, company, admin with secret)
  * @route   POST /api/auth/register
- * @access  Public
+ * @access  Public (Admin requires administrative secret)
  */
 exports.register = async (req, res) => {
   try {
@@ -56,18 +57,53 @@ exports.register = async (req, res) => {
       preferredLanguage,
       cropsGrown,
       companyDetails,
-      bio
+      bio,
+      adminSecret
     } = req.body;
 
     if (!name || !phone || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide name, phone number, and password'
+        message: 'Please provide full name, mobile number, and password'
       });
     }
 
+    // Input sanitization and phone validation
+    const cleanPhone = phone.trim().replace(/\D/g, '').slice(-10);
+    if (cleanPhone.length !== 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid 10-digit Indian mobile number'
+      });
+    }
+
+    // Password minimum length check
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long'
+      });
+    }
+
+    // Role privilege escalation protection
+    let assignedRole = role || 'farmer';
+    if (assignedRole === 'admin') {
+      const expectedSecret = process.env.ADMIN_REGISTRATION_SECRET || 'fieldroot_admin_secret_key_2026';
+      const providedSecret = adminSecret || req.headers['x-admin-secret'];
+
+      if (!providedSecret || providedSecret !== expectedSecret) {
+        logSecurityEvent('UNAUTHORIZED_ADMIN_REGISTRATION_ATTEMPT', `Blocked admin attempt on phone: ${cleanPhone}`, req);
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: Admin registration requires a valid administrative verification secret.'
+        });
+      }
+    } else if (!['farmer', 'company'].includes(assignedRole)) {
+      assignedRole = 'farmer';
+    }
+
     // Check existing phone
-    const existingUser = await User.findOne({ phone: phone.trim() });
+    const existingUser = await User.findOne({ phone: cleanPhone });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -77,25 +113,26 @@ exports.register = async (req, res) => {
 
     const userData = {
       name: name.trim(),
-      phone: phone.trim(),
+      phone: cleanPhone,
       email: email ? email.trim() : undefined,
       password,
-      role: role || 'farmer',
-      village: village || '',
-      district: district || '',
-      state: state || '',
-      farmSize: farmSize ? Number(farmSize) : 0,
+      role: assignedRole,
+      village: village ? village.trim() : '',
+      district: district ? district.trim() : '',
+      state: state ? state.trim() : '',
+      farmSize: farmSize ? Math.max(0, Number(farmSize)) : 0,
       soilType: soilType || 'Loamy',
       preferredLanguage: preferredLanguage || 'en',
       cropsGrown: Array.isArray(cropsGrown) ? cropsGrown : cropsGrown ? [cropsGrown] : [],
-      bio: bio || ''
+      bio: bio ? bio.trim() : ''
     };
 
-    if (role === 'company' && companyDetails) {
+    if (assignedRole === 'company' && companyDetails) {
       userData.companyDetails = companyDetails;
     }
 
     const user = await User.create(userData);
+    logSecurityEvent('USER_REGISTERED', `Role: ${user.role}, Phone: ${user.phone}`, req);
     sendTokenResponse(user, 201, res);
   } catch (error) {
     console.error('Register Error:', error);
@@ -107,7 +144,7 @@ exports.register = async (req, res) => {
 };
 
 /**
- * @desc    Login user with phone & password
+ * @desc    Login user with phone & password (constant-time comparison)
  * @route   POST /api/auth/login
  * @access  Public
  */
@@ -122,8 +159,11 @@ exports.login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ phone: phone.trim() }).select('+password');
+    const cleanPhone = phone.trim().replace(/\D/g, '').slice(-10);
+    const user = await User.findOne({ phone: cleanPhone }).select('+password');
+
     if (!user) {
+      logSecurityEvent('FAILED_LOGIN_UNKNOWN_PHONE', `Attempted Phone: ${cleanPhone}`, req);
       return res.status(401).json({
         success: false,
         message: 'Invalid phone number or password'
@@ -132,12 +172,14 @@ exports.login = async (req, res) => {
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      logSecurityEvent('FAILED_LOGIN_PASSWORD_MISMATCH', `Account Phone: ${cleanPhone}`, req);
       return res.status(401).json({
         success: false,
         message: 'Invalid phone number or password'
       });
     }
 
+    logSecurityEvent('SUCCESSFUL_LOGIN', `Account: ${cleanPhone} (${user.role})`, req);
     sendTokenResponse(user, 200, res);
   } catch (error) {
     console.error('Login Error:', error);

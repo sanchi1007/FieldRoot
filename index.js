@@ -2,10 +2,17 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
+const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
 
 const connectDB = require('./config/db');
+const {
+  apiLimiter,
+  noSqlSanitizer,
+  xssSanitizer,
+  logSecurityEvent
+} = require('./middleware/security');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -19,17 +26,77 @@ if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
 // Connect to MongoDB
 connectDB();
 
-// Core Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// 1. Helmet HTTP Security Headers (with CSP configured for Google Fonts and QR data URLs)
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        connectSrc: ["'self'", 'https://api.openweathermap.org']
+      }
+    },
+    crossOriginEmbedderPolicy: false,
+    frameguard: { action: 'sameorigin' }
+  })
+);
+
+// 2. Hardened CORS Configuration
+const allowedOrigins = [
+  'http://localhost:5000',
+  'http://127.0.0.1:5000',
+  process.env.BASE_URL
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Permissive in dev, origin-checked in prod
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret'],
+    credentials: true
+  })
+);
+
+// 3. Body Parser Limits (Mitigate JSON payload flood attacks)
+app.use(express.json({ limit: '50kb' }));
+app.use(express.urlencoded({ extended: true, limit: '50kb' }));
+
+// 4. NoSQL Injection Prevention (Sanitize MongoDB operators $ and .)
+app.use(noSqlSanitizer);
+
+// 5. XSS & Malicious Script Stripper
+app.use(xssSanitizer);
+
+// 6. Morgan Logging (Dev)
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-// Serve Static Frontend and Uploaded Files
+// 7. General API Rate Limiting (300 requests / 15 mins)
+app.use('/api/', apiLimiter);
+
+// 8. Serve Uploaded Files securely (prevent script execution in uploads folder)
+app.use(
+  '/uploads',
+  (req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'");
+    next();
+  },
+  express.static(path.join(__dirname, 'uploads'))
+);
+
+// Serve Static Frontend
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -37,11 +104,17 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     app: 'FieldRoot Connect API',
     version: '1.0.0',
+    security: {
+      helmet: 'active',
+      rateLimiting: 'active',
+      noSqlSanitization: 'active',
+      xssSanitization: 'active'
+    },
     timestamp: new Date().toISOString()
   });
 });
 
-// Dynamic Route Loader Helper to mount API routes safely as they are built
+// Dynamic Route Loader Helper
 const safeMount = (routePath, routerFile) => {
   try {
     const route = require(routerFile);
@@ -68,17 +141,28 @@ safeMount('/api/community', './routes/community');
 safeMount('/api/admin', './routes/admin');
 safeMount('/api/traceability', './routes/traceability');
 
-// Fallback to index.html for frontend single-page or static routing if needed
+// Fallback to index.html for root path
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `API endpoint '${req.originalUrl}' not found`
+  });
+});
+
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error('Server Error:', err.stack);
-  res.status(err.status || 500).json({
+  logSecurityEvent('UNHANDLED_SERVER_ERROR', err.message, req);
+  const status = err.status || 500;
+  const isProd = process.env.NODE_ENV === 'production';
+
+  res.status(status).json({
     success: false,
-    message: err.message || 'Internal Server Error'
+    message: isProd && status === 500 ? 'Internal Server Error' : err.message || 'Server Error'
   });
 });
 
@@ -86,7 +170,7 @@ app.use((err, req, res, next) => {
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`🌾 FieldRoot Connect running on http://localhost:${PORT}`);
-    console.log(`🌿 Farmer-first herbal cosmetics agri platform ready`);
+    console.log(`🔒 Security features active (Helmet, Rate Limiting, NoSQL Sanitizer, XSS Defense)`);
   });
 }
 

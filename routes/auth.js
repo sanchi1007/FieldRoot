@@ -9,9 +9,12 @@ const {
   getFarmers
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
+const { authLimiter } = require('../middleware/security');
 
-router.post('/register', register);
-router.post('/login', login);
+// Strict rate-limiting on sensitive authentication endpoints
+router.post('/register', authLimiter, register);
+router.post('/login', authLimiter, login);
+
 router.get('/me', protect, getMe);
 router.put('/me', protect, updateProfile);
 router.put('/update-language', protect, updateLanguage);

@@ -3,6 +3,7 @@ const Product = require('../models/Product');
 const Order = require('../models/Order');
 const Contract = require('../models/Contract');
 const { HERBAL_INGREDIENTS } = require('../config/constants');
+const { getSecurityAuditLogs } = require('../middleware/security');
 
 /**
  * @desc    Get admin platform overview stats
@@ -152,6 +153,24 @@ exports.updateCommission = async (req, res) => {
       success: true,
       message: `Platform commission updated to ${commissionPercent}%`,
       commissionPercent
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Get real-time security audit log events
+ * @route   GET /api/admin/security-audit
+ * @access  Private (Admin)
+ */
+exports.getSecurityAudit = async (req, res) => {
+  try {
+    const logs = getSecurityAuditLogs();
+    res.status(200).json({
+      success: true,
+      count: logs.length,
+      logs
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

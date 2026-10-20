@@ -3,6 +3,7 @@ const Product = require('../models/Product');
 const Rating = require('../models/Rating');
 const User = require('../models/User');
 const Payment = require('../models/Payment');
+const { logSecurityEvent } = require('../middleware/security');
 
 /**
  * @desc    Get user's orders (Farmer sales, Company purchases, or Admin all)
@@ -64,7 +65,8 @@ exports.getOrderById = async (req, res) => {
       req.user.role === 'admin';
 
     if (!isParty) {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
+      logSecurityEvent('UNAUTHORIZED_ORDER_ACCESS', `User ${req.user.id} tried accessing order ${order._id}`, req);
+      return res.status(403).json({ success: false, message: 'Unauthorized access to this order record' });
     }
 
     // Fetch rating if exists
@@ -102,13 +104,29 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    const qty = Number(quantity);
+    const price = Number(offeredPricePerUnit);
+
+    if (isNaN(qty) || qty <= 0 || isNaN(price) || price <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Quantity and price must be strictly positive numeric values'
+      });
+    }
+
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    const qty = Number(quantity);
-    const price = Number(offeredPricePerUnit);
+    // Prevent buying from own self
+    if (product.farmer.toString() === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Growers cannot place purchase orders on their own listings'
+      });
+    }
+
     const subtotal = qty * price;
     const commPercent = Number(process.env.PLATFORM_COMMISSION_PERCENT || 2.5);
     const commissionAmount = (subtotal * commPercent) / 100;
@@ -172,11 +190,21 @@ exports.counterOffer = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    if (!counterPricePerUnit) {
-      return res.status(400).json({ success: false, message: 'Please specify counter price per unit' });
+    const isParty =
+      order.buyer.toString() === req.user.id ||
+      order.farmer.toString() === req.user.id ||
+      req.user.role === 'admin';
+
+    if (!isParty) {
+      logSecurityEvent('UNAUTHORIZED_ORDER_NEGOTIATION', `User ${req.user.id} tried to negotiate order ${order._id}`, req);
+      return res.status(403).json({ success: false, message: 'Unauthorized to submit counter-offer on this order' });
     }
 
     const newPrice = Number(counterPricePerUnit);
+    if (isNaN(newPrice) || newPrice <= 0) {
+      return res.status(400).json({ success: false, message: 'Counter price must be a valid positive number' });
+    }
+
     const newSubtotal = order.quantity * newPrice;
     const commPercent = order.commissionPercent || 2.5;
     const newCommission = (newSubtotal * commPercent) / 100;
@@ -219,6 +247,21 @@ exports.updateOrderStatus = async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    const isParty =
+      order.buyer.toString() === req.user.id ||
+      order.farmer.toString() === req.user.id ||
+      req.user.role === 'admin';
+
+    if (!isParty) {
+      logSecurityEvent('UNAUTHORIZED_STATUS_CHANGE', `User ${req.user.id} tried modifying order ${order._id}`, req);
+      return res.status(403).json({ success: false, message: 'Unauthorized to update this order' });
+    }
+
+    const allowedStatuses = ['Requested', 'Accepted', 'Dispatched', 'Delivered', 'Paid', 'Rejected', 'Cancelled'];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: `Invalid status: '${status}'` });
     }
 
     const prevStatus = order.status;
@@ -276,7 +319,8 @@ exports.dispatchOrder = async (req, res) => {
     }
 
     if (order.farmer.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
+      logSecurityEvent('UNAUTHORIZED_DISPATCH_ATTEMPT', `User ${req.user.id} tried dispatching order ${order._id}`, req);
+      return res.status(403).json({ success: false, message: 'Unauthorized to dispatch this order' });
     }
 
     order.status = 'Dispatched';
@@ -320,22 +364,31 @@ exports.rateOrder = async (req, res) => {
     }
 
     if (order.buyer.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Only buyer can rate this order' });
+      return res.status(403).json({ success: false, message: 'Only the ordering buyer can rate this order' });
+    }
+
+    if (!['Delivered', 'Paid'].includes(order.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ratings can only be submitted after the order has been delivered and inspected'
+      });
     }
 
     if (order.isRated) {
       return res.status(400).json({ success: false, message: 'This order has already been rated' });
     }
 
+    const numRating = Math.max(1, Math.min(5, Number(rating)));
+
     // Create rating
     const ratingDoc = await Rating.create({
       order: order._id,
       reviewer: req.user.id,
       farmer: order.farmer,
-      rating: Number(rating),
-      qualityScore: Number(qualityScore),
-      purityScore: Number(purityScore),
-      deliveryScore: Number(deliveryScore),
+      rating: numRating,
+      qualityScore: Math.max(1, Math.min(5, Number(qualityScore))),
+      purityScore: Math.max(1, Math.min(5, Number(purityScore))),
+      deliveryScore: Math.max(1, Math.min(5, Number(deliveryScore))),
       reviewTitle: reviewTitle || 'Organic Botanical Quality Rating',
       comment: comment || 'Verified quality and delivery fulfillment.'
     });
