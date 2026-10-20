@@ -17,9 +17,10 @@ const {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Ensure uploads and images directories exist
+// Ensure uploads and frontend directories exist
 const uploadDir = path.join(__dirname, 'uploads');
-const imagesDir = path.join(__dirname, 'public', 'images');
+const frontendDir = path.join(__dirname, '..', 'frontend');
+const imagesDir = path.join(frontendDir, 'images');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
 
@@ -97,7 +98,7 @@ app.use(
 );
 
 // Serve Static Frontend
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(frontendDir));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

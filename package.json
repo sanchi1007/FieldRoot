@@ -2,11 +2,12 @@
   "name": "fieldroot-connect",
   "version": "1.0.0",
   "description": "Farmer-first agri platform connecting organic herbal growers directly with FieldRoot cosmetics",
-  "main": "index.js",
+  "main": "backend/index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js",
-    "seed": "node seed.js"
+    "start": "node backend/index.js",
+    "dev": "node --watch backend/index.js",
+    "seed": "node backend/seed.js",
+    "backend": "cd backend && npm start"
   },
   "keywords": [
     "ayurveda",

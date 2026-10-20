@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const imgDir = path.join(__dirname, 'public', 'images');
+const imgDir = path.join(__dirname, '..', 'frontend', 'images');
 if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true });
 
 const images = [

@@ -34,77 +34,81 @@ The platform eliminates middlemen traders who extract 25%–40% wholesale commis
 
 ---
 
-## 📁 Folder Structure
+## 📁 Clean Architecture: Separate Backend & Frontend
 
 ```
 fieldroot/
-├── config/
-│   ├── db.js                     # MongoDB connection handler
-│   └── constants.js              # 30+ Ayurvedic crops, grade benchmarks, soil maps
-├── controllers/
-│   ├── adminController.js        # Admin KPIs, verification, moderation
-│   ├── advisorController.js      # Soil & profit recommendation engine
-│   ├── authController.js         # Register, login, language persistence
-│   ├── chatController.js         # Direct farmer-buyer chat threads
-│   ├── contractController.js     # Pre-season buyback agreements & 20% advance
-│   ├── earningsController.js     # Farmer revenue charts & mandi comparisons
-│   ├── orderController.js        # Order tracking & 2.5% commission invoices
-│   ├── priceController.js        # APMC Mandi price benchmarks vs direct rates
-│   ├── productController.js      # Product listings, search, filters & QR code
-│   ├── tipController.js          # Organic farming & quality grade manuals
-│   ├── traceabilityController.js # Public batch passport & farm origin story
-│   └── weatherController.js      # Live weather advisories & seasonal calendar
-├── middleware/
-│   ├── auth.js                   # JWT verification & role authorization guards
-│   └── upload.js                 # Multer photo upload handler for /uploads
-├── models/
-│   ├── Contract.js               # Contract farming agreement model
-│   ├── Message.js                # Direct chat message model
-│   ├── Order.js                  # Orders, invoices & tracking model
-│   ├── Payment.js                # Advance, settlement & commission model
-│   ├── PriceRecord.js            # Mandi benchmark price record model
-│   ├── Product.js                # Farmer harvest listing model
-│   ├── Question.js               # Community forum Q&A model
-│   ├── Rating.js                 # Trust score & quality review model
-│   ├── Tip.js                    # Illustrated guide model
-│   └── User.js                   # Farmer, Company & Admin account model
-├── public/
+├── backend/                      # Node.js + Express REST API Server
+│   ├── config/                   # Database & constants
+│   │   ├── db.js                 # MongoDB connection handler
+│   │   └── constants.js          # 30+ Ayurvedic crops, grade benchmarks, soil maps
+│   ├── controllers/              # API route controllers
+│   │   ├── adminController.js    # Admin verification & governance
+│   │   ├── advisorController.js  # Soil & profit recommendation engine
+│   │   ├── authController.js     # Register, login, language sync
+│   │   ├── chatController.js     # Direct farmer-buyer messages
+│   │   ├── contractController.js # Pre-season buyback & 20% advance
+│   │   ├── earningsController.js # Farmer revenue & mandi comparisons
+│   │   ├── orderController.js    # Order lifecycle & commission invoices
+│   │   ├── priceController.js    # Live Mandi vs FieldRoot rates
+│   │   ├── productController.js  # Product catalog & QR batch generator
+│   │   ├── tipController.js      # Organic farming & quality manuals
+│   │   ├── traceabilityController.js # Public batch passport
+│   │   └── weatherController.js  # Weather advisories & crop timetable
+│   ├── middleware/               # Security, auth, & Multer upload
+│   │   ├── auth.js               # JWT verification & role guards
+│   │   ├── security.js           # Helmet, rate-limit, NoSQL & XSS sanitizer
+│   │   └── upload.js             # Photo upload handler
+│   ├── models/                   # Mongoose data schemas (10 models)
+│   │   ├── Contract.js
+│   │   ├── Message.js
+│   │   ├── Order.js
+│   │   ├── Payment.js
+│   │   ├── PriceRecord.js
+│   │   ├── Product.js
+│   │   ├── Question.js
+│   │   ├── Rating.js
+│   │   ├── Tip.js
+│   │   └── User.js
+│   ├── routes/                   # REST API express routers (12 modules)
+│   ├── uploads/                  # Uploaded harvest photos
+│   ├── index.js                  # Backend entry point
+│   ├── seed.js                   # 30+ ingredients seed script
+│   ├── package.json              # Backend dependencies
+│   └── .env.example              # Environment variables template
+├── frontend/                     # Pure Vanilla Web Client
 │   ├── css/
-│   │   └── style.css             # Warm earthy Ayurvedic responsive styling
-│   ├── images/                   # Real botanical harvest visuals & icons
+│   │   └── style.css             # Earthy Ayurvedic responsive styling
 │   ├── js/
-│   │   ├── api.js                # Unified HTTP client & toast notifications
+│   │   ├── api.js                # Unified HTTP client & notifications
 │   │   ├── auth.js               # Session state & protected route guards
 │   │   ├── i18n.js               # 9-language translation engine
-│   │   ├── nav.js                # Dynamic header, language selector, & footer
+│   │   ├── nav.js                # Responsive header & off-canvas drawer
 │   │   └── voice.js              # Web Speech API voice input controller
-│   ├── lang/                     # en, hi, mr, gu, ta, te, kn, bn, pa JSON files
-│   ├── add-product.html          # Add product harvest listing form
-│   ├── admin.html                # Platform admin governance panel
-│   ├── chat.html                 # Direct messaging interface
-│   ├── community.html            # Farmer peer Q&A forum
-│   ├── contracts.html            # Pre-season contract farming page
-│   ├── crop-advisor.html         # Soil & profit recommendation advisor
-│   ├── earnings.html             # Farmer revenue & company sourcing analytics
-│   ├── farmer-dashboard.html     # Farmer command center & demand alerts
+│   ├── images/                   # Real botanical harvest visuals & icons
+│   ├── lang/                     # 9 Indian language dictionaries (JSON)
 │   ├── index.html                # Landing page & brand story
-│   ├── learn.html                # Organic composting & quality manuals
 │   ├── login.html                # Account login with demo autofill
+│   ├── register.html             # Farmer / Company registration
+│   ├── farmer-dashboard.html     # Farmer command center & demand alerts
 │   ├── marketplace.html          # B2B herbal procurement marketplace
+│   ├── add-product.html          # Add product harvest listing form
 │   ├── my-products.html          # Farmer inventory & views dashboard
+│   ├── product-detail.html       # Harvest specs & buy request modal
+│   ├── contracts.html            # Pre-season contract farming page
 │   ├── orders.html               # Order tracking & commission invoice view
+│   ├── earnings.html             # Farmer revenue & company sourcing analytics
+│   ├── crop-advisor.html         # Soil & profit recommendation advisor
 │   ├── price-tracker.html        # Live Mandi vs FieldRoot price comparison
-│   ├── product-detail.html       # Harvest specs, QR code & buy request modal
-│   ├── register.html             # Multi-lingual farmer / buyer registration
-│   ├── traceability.html         # Public batch verification & printable QR label
-│   └── weather-calendar.html     # District weather & seasonal crop timetable
-├── uploads/                      # Uploaded harvest photos
-├── .env                          # Environment variables
-├── .env.example                  # Environment template
-├── create_images.js              # Visual asset generator
-├── index.js                      # Express server entry point
-├── package.json                  # Dependencies & scripts
-└── seed.js                       # 30+ ingredients & sample dataset seed script
+│   ├── weather-calendar.html     # District weather & seasonal crop timetable
+│   ├── learn.html                # Organic composting & quality manuals
+│   ├── community.html            # Farmer peer Q&A forum
+│   ├── chat.html                 # Direct messaging interface
+│   ├── admin.html                # Platform admin governance panel
+│   └── traceability.html         # Public batch verification & QR label
+├── package.json                  # Root monorepo convenience scripts
+├── .gitignore                    # Git ignore rules
+└── README.md                     # Complete project documentation
 ```
 
 ---
