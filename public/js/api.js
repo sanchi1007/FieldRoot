@@ -24,7 +24,13 @@ const API = {
 
     try {
       const response = await fetch(url, options);
-      const data = await response.json();
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: text || `Request failed with status ${response.status}` };
+      }
 
       if (!response.ok) {
         if (response.status === 401 && Auth.isLoggedIn()) {

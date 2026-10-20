@@ -153,15 +153,23 @@
 
       // Highlight active in sidebar
       document.querySelectorAll('.conversation-item').forEach(el => el.classList.remove('active'));
+
+      // Start live polling for incoming messages
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(async () => {
+        if (activeRecipientId) {
+          await loadMessages(activeRecipientId, true);
+        }
+      }, 3500);
     }
 
-    async function loadMessages(userId) {
+    async function loadMessages(userId, isSilent = false) {
       const msgArea = document.getElementById('chat-messages-area');
       const currentUser = Auth.getUser();
 
       try {
         const res = await API.get(`/chat/messages/${userId}`);
-        if (res.contact) {
+        if (res.contact && !isSilent) {
           document.getElementById('active-contact-name').textContent = res.contact.name;
           document.getElementById('active-contact-role').textContent =
             `${res.contact.role.toUpperCase()} • ${res.contact.district || ''}, ${res.contact.state || ''}`;
@@ -171,9 +179,13 @@
         }
 
         if (!res.messages || res.messages.length === 0) {
-          msgArea.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">No messages yet. Say hello!</div>';
+          if (!isSilent) {
+            msgArea.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">No messages yet. Say hello!</div>';
+          }
           return;
         }
+
+        const wasNearBottom = msgArea.scrollHeight - msgArea.scrollTop - msgArea.clientHeight < 80;
 
         msgArea.innerHTML = res.messages.map(m => {
           const isMe = m.sender._id === currentUser.id;
@@ -186,7 +198,9 @@
           `;
         }).join('');
 
-        msgArea.scrollTop = msgArea.scrollHeight;
+        if (!isSilent || wasNearBottom) {
+          msgArea.scrollTop = msgArea.scrollHeight;
+        }
       } catch (err) {
         console.warn('Messages error:', err);
       }

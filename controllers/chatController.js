@@ -116,6 +116,13 @@ exports.sendMessage = async (req, res) => {
       });
     }
 
+    if (recipientId === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot send messages to yourself'
+      });
+    }
+
     const recipient = await User.findById(recipientId);
     if (!recipient) {
       return res.status(404).json({ success: false, message: 'Recipient not found' });

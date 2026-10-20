@@ -180,35 +180,36 @@ exports.createContract = async (req, res) => {
  */
 exports.acceptContract = async (req, res) => {
   try {
-    const contract = await Contract.findById(req.params.id);
+    const contract = await Contract.findOneAndUpdate(
+      { _id: req.params.id, status: 'open' },
+      {
+        status: 'accepted',
+        acceptedFarmer: req.user.id,
+        acceptedDate: new Date(),
+        $set: {
+          'timeline.0.completed': true,
+          'timeline.0.completedDate': new Date(),
+          'timeline.0.notes': `Accepted digitally by farmer ${req.user.name}`
+        }
+      },
+      { new: true }
+    );
 
     if (!contract) {
-      return res.status(404).json({ success: false, message: 'Contract not found' });
-    }
-
-    if (contract.status !== 'open') {
+      const exists = await Contract.findById(req.params.id);
+      if (!exists) {
+        return res.status(404).json({ success: false, message: 'Contract not found' });
+      }
       return res.status(400).json({
         success: false,
-        message: 'This contract has already been accepted or closed'
+        message: 'This contract has already been accepted or closed by another grower'
       });
     }
 
-    contract.status = 'accepted';
-    contract.acceptedFarmer = req.user.id;
-    contract.acceptedDate = new Date();
-
-    // Mark 'Contract Signed' as completed in timeline
-    if (contract.timeline && contract.timeline.length > 0) {
-      contract.timeline[0].completed = true;
-      contract.timeline[0].completedDate = new Date();
-      contract.timeline[0].notes = `Accepted digitally by farmer ${req.user.name}`;
-    }
-
-    await contract.save();
-
     // Create an associated Contract Order
     const subtotal = contract.totalContractValue;
-    const comm = (subtotal * 2.5) / 100;
+    const commPercent = Number(process.env.PLATFORM_COMMISSION_PERCENT || 2.5);
+    const comm = (subtotal * commPercent) / 100;
     const advanceAmount = contract.advanceAmount;
 
     const order = await Order.create({
@@ -222,7 +223,7 @@ exports.acceptContract = async (req, res) => {
       offeredPricePerUnit: contract.pricePerUnit,
       finalPricePerUnit: contract.pricePerUnit,
       subtotal: subtotal,
-      commissionPercent: 2.5,
+      commissionPercent: commPercent,
       commissionAmount: comm,
       totalBuyerPayable: subtotal + comm,
       farmerReceivable: subtotal,

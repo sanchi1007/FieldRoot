@@ -166,7 +166,7 @@ exports.upvoteQuestion = async (req, res) => {
     }
 
     const userId = req.user.id;
-    const alreadyUpvoted = question.upvotes.includes(userId);
+    const alreadyUpvoted = question.upvotes.some((u) => u.toString() === userId);
 
     if (alreadyUpvoted) {
       question.upvotes = question.upvotes.filter((u) => u.toString() !== userId);

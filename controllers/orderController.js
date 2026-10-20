@@ -119,6 +119,22 @@ exports.createOrder = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
+    // Check availability
+    if (product.status !== 'available') {
+      return res.status(400).json({
+        success: false,
+        message: 'This product listing is marked as sold out and cannot accept new orders'
+      });
+    }
+
+    // Check stock bounds
+    if (qty > product.quantity) {
+      return res.status(400).json({
+        success: false,
+        message: `Requested quantity (${qty} ${product.unit}) exceeds available harvest stock (${product.quantity} ${product.unit})`
+      });
+    }
+
     // Prevent buying from own self
     if (product.farmer.toString() === req.user.id) {
       return res.status(400).json({
@@ -249,12 +265,11 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    const isParty =
-      order.buyer.toString() === req.user.id ||
-      order.farmer.toString() === req.user.id ||
-      req.user.role === 'admin';
+    const isBuyer = order.buyer.toString() === req.user.id;
+    const isFarmer = order.farmer.toString() === req.user.id;
+    const isAdmin = req.user.role === 'admin';
 
-    if (!isParty) {
+    if (!isBuyer && !isFarmer && !isAdmin) {
       logSecurityEvent('UNAUTHORIZED_STATUS_CHANGE', `User ${req.user.id} tried modifying order ${order._id}`, req);
       return res.status(403).json({ success: false, message: 'Unauthorized to update this order' });
     }
@@ -265,6 +280,86 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     const prevStatus = order.status;
+
+    // Strict role-based state machine transition rules
+    if (!isAdmin) {
+      if (isFarmer) {
+        if (prevStatus === 'Requested' && !['Accepted', 'Rejected'].includes(status)) {
+          return res.status(400).json({
+            success: false,
+            message: `Farmers can only Accept or Reject a new order request. Cannot mark as '${status}'.`
+          });
+        }
+        if (prevStatus === 'Accepted' && status !== 'Dispatched') {
+          return res.status(400).json({
+            success: false,
+            message: `Accepted orders can only be transitioned to 'Dispatched'.`
+          });
+        }
+        if (['Dispatched', 'Delivered', 'Paid', 'Rejected', 'Cancelled'].includes(prevStatus)) {
+          return res.status(400).json({
+            success: false,
+            message: `Order is already in state '${prevStatus}'. Grower cannot modify it further.`
+          });
+        }
+      } else if (isBuyer) {
+        if (prevStatus === 'Requested' && status !== 'Cancelled') {
+          return res.status(400).json({
+            success: false,
+            message: `Buyers can only Cancel a pending request. Cannot mark as '${status}'.`
+          });
+        }
+        if (prevStatus === 'Accepted') {
+          return res.status(400).json({
+            success: false,
+            message: `Order is awaiting farmer dispatch. Buyer cannot modify status yet.`
+          });
+        }
+        if (prevStatus === 'Dispatched' && status !== 'Delivered') {
+          return res.status(400).json({
+            success: false,
+            message: `Dispatched orders must first be confirmed as 'Delivered' upon receipt.`
+          });
+        }
+        if (prevStatus === 'Delivered' && status !== 'Paid') {
+          return res.status(400).json({
+            success: false,
+            message: `Delivered orders can only be marked as 'Paid' after settlement.`
+          });
+        }
+        if (['Paid', 'Rejected', 'Cancelled'].includes(prevStatus)) {
+          return res.status(400).json({
+            success: false,
+            message: `Order is in final state: '${prevStatus}'.`
+          });
+        }
+      }
+    }
+
+    // Inventory management: When order is accepted, decrement product stock
+    if (status === 'Accepted' && prevStatus === 'Requested' && order.product) {
+      const prod = await Product.findById(order.product);
+      if (prod) {
+        prod.quantity = Math.max(0, prod.quantity - order.quantity);
+        if (prod.quantity === 0) {
+          prod.status = 'sold_out';
+        }
+        await prod.save();
+      }
+    }
+
+    // If an Accepted order is subsequently Cancelled or Rejected, restore stock
+    if (['Rejected', 'Cancelled'].includes(status) && prevStatus === 'Accepted' && order.product) {
+      const prod = await Product.findById(order.product);
+      if (prod) {
+        prod.quantity += order.quantity;
+        if (prod.status === 'sold_out' && prod.quantity > 0) {
+          prod.status = 'available';
+        }
+        await prod.save();
+      }
+    }
+
     order.status = status;
 
     if (note) {
@@ -321,6 +416,13 @@ exports.dispatchOrder = async (req, res) => {
     if (order.farmer.toString() !== req.user.id && req.user.role !== 'admin') {
       logSecurityEvent('UNAUTHORIZED_DISPATCH_ATTEMPT', `User ${req.user.id} tried dispatching order ${order._id}`, req);
       return res.status(403).json({ success: false, message: 'Unauthorized to dispatch this order' });
+    }
+
+    if (order.status !== 'Accepted' && req.user.role !== 'admin') {
+      return res.status(400).json({
+        success: false,
+        message: `Order must be in 'Accepted' status before dispatching. Current status: '${order.status}'`
+      });
     }
 
     order.status = 'Dispatched';
