@@ -1,11 +1,17 @@
 const mongoose = require('mongoose');
 
+let isConnected = false;
+
 const connectDB = async () => {
+  if (isConnected || mongoose.connection.readyState >= 1) {
+    return;
+  }
+
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/fieldroot_connect';
 
   if (!process.env.MONGODB_URI && process.env.NODE_ENV === 'production') {
-    console.error('❌ MONGODB_URI environment variable is missing in Render settings!');
-    console.error('Please go to Render Dashboard -> Environment -> Add MONGODB_URI');
+    console.error('❌ MONGODB_URI environment variable is missing in deployment settings!');
+    console.error('Please configure MONGODB_URI in your Vercel / Render Environment Variables tab.');
     process.exit(1);
   }
 
@@ -13,6 +19,7 @@ const connectDB = async () => {
     const conn = await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 10000
     });
+    isConnected = true;
     console.log(`🌿 MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`);
     return conn;
   } catch (error) {

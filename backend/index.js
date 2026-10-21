@@ -145,7 +145,7 @@ safeMount('/api/traceability', './routes/traceability');
 
 // Fallback to index.html for root path
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(frontendDir, 'index.html'));
 });
 
 // 404 handler for API routes
