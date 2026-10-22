@@ -12,7 +12,7 @@ const securityAuditLogs = [];
 const MAX_AUDIT_LOGS = 100;
 
 const logSecurityEvent = (eventType, details, req) => {
-  const ip = req ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown') : 'internal';
+  const ip = req?.headers ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown') : (req?.ip || 'internal');
   const entry = {
     id: 'SEC-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
     timestamp: new Date().toISOString(),

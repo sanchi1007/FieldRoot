@@ -120,36 +120,53 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Dynamic Route Loader Helper
-const safeMount = (routePath, routerFile) => {
+// Ensure MongoDB connection is ready in serverless environments
+app.use(async (req, res, next) => {
   try {
-    const route = require(routerFile);
-    app.use(routePath, route);
-    // Also mount without /api prefix for maximum serverless compatibility
-    if (routePath.startsWith('/api/')) {
-      app.use(routePath.replace('/api', ''), route);
-    }
+    await connectDB();
   } catch (err) {
-    if (err.code !== 'MODULE_NOT_FOUND') {
-      console.warn(`Warning loading ${routerFile}:`, err.message);
-    }
+    // Log notice, allow routes with fallbacks to respond smoothly
+  }
+  next();
+});
+
+// Explicit static requires so @vercel/nft traces and bundles all routes in serverless
+const authRoutes = require('./routes/auth');
+const productRoutes = require('./routes/products');
+const contractRoutes = require('./routes/contracts');
+const orderRoutes = require('./routes/orders');
+const earningRoutes = require('./routes/earnings');
+const chatRoutes = require('./routes/chat');
+const advisorRoutes = require('./routes/advisor');
+const weatherRoutes = require('./routes/weather');
+const priceRoutes = require('./routes/prices');
+const tipRoutes = require('./routes/tips');
+const communityRoutes = require('./routes/community');
+const adminRoutes = require('./routes/admin');
+const traceabilityRoutes = require('./routes/traceability');
+
+const mountRoute = (path, router) => {
+  app.use(path, router);
+  // Also mount without /api prefix for maximum serverless compatibility
+  if (path.startsWith('/api/')) {
+    app.use(path.replace('/api', ''), router);
   }
 };
 
 // Mount API routes
-safeMount('/api/auth', './routes/auth');
-safeMount('/api/products', './routes/products');
-safeMount('/api/contracts', './routes/contracts');
-safeMount('/api/orders', './routes/orders');
-safeMount('/api/earnings', './routes/earnings');
-safeMount('/api/chat', './routes/chat');
-safeMount('/api/advisor', './routes/advisor');
-safeMount('/api/weather', './routes/weather');
-safeMount('/api/prices', './routes/prices');
-safeMount('/api/tips', './routes/tips');
-safeMount('/api/community', './routes/community');
-safeMount('/api/admin', './routes/admin');
-safeMount('/api/traceability', './routes/traceability');
+mountRoute('/api/auth', authRoutes);
+mountRoute('/api/products', productRoutes);
+mountRoute('/api/contracts', contractRoutes);
+mountRoute('/api/orders', orderRoutes);
+mountRoute('/api/earnings', earningRoutes);
+mountRoute('/api/chat', chatRoutes);
+mountRoute('/api/advisor', advisorRoutes);
+mountRoute('/api/weather', weatherRoutes);
+mountRoute('/api/prices', priceRoutes);
+mountRoute('/api/tips', tipRoutes);
+mountRoute('/api/community', communityRoutes);
+mountRoute('/api/admin', adminRoutes);
+mountRoute('/api/traceability', traceabilityRoutes);
 
 // Fallback to index.html for root path
 app.get('/', (req, res) => {
