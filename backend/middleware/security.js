@@ -119,13 +119,16 @@ const xssSanitizer = (req, res, next) => {
 
 /**
  * 5. MongoDB ObjectId Parameter Validator
- * Rejects malformed hex strings before hitting Mongoose database queries
+ * Rejects malformed hex strings before hitting Mongoose database queries,
+ * while permitting demo identifier slugs (e.g., prod_*, ord_*, con_*) in demo/serverless mode.
  */
 const validateObjectId = (paramName = 'id') => {
   const objectIdPattern = /^[0-9a-fA-F]{24}$/;
+  const demoSlugPattern = /^(demo|prod|ord|con|q|tip|batch|user)_[a-zA-Z0-9_-]+$/i;
+
   return (req, res, next) => {
     const id = req.params[paramName];
-    if (id && !objectIdPattern.test(id)) {
+    if (id && !objectIdPattern.test(id) && !demoSlugPattern.test(id)) {
       logSecurityEvent('INVALID_OBJECT_ID', `Invalid ID format received: ${id}`, req);
       return res.status(400).json({
         success: false,
