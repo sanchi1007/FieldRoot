@@ -29,10 +29,7 @@ try {
   // Read-only filesystem in serverless environments
 }
 
-// Connect to MongoDB (non-blocking in traditional server, will be cached in serverless)
-connectDB().catch((err) => {
-  console.warn('Initial MongoDB connection deferred:', err.message);
-});
+// Note: DB connection is handled on-demand in serverless middleware (line 127) or on server startup below
 
 // 1. Helmet HTTP Security Headers (with CSP configured for Google Fonts and QR data URLs)
 app.use(
@@ -198,6 +195,9 @@ app.use((err, req, res, next) => {
 
 // Start Server (only when run directly as a process, not when imported by Vercel serverless functions)
 if (require.main === module) {
+  connectDB().catch((err) => {
+    console.warn('Initial MongoDB connection deferred:', err.message);
+  });
   app.listen(PORT, () => {
     console.log(`🌾 FieldRoot Connect running on http://localhost:${PORT}`);
     console.log(`🔒 Security features active (Helmet, Rate Limiting, NoSQL Sanitizer, XSS Defense)`);
