@@ -17,15 +17,19 @@ const {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Ensure uploads and frontend directories exist
-const uploadDir = path.join(__dirname, 'uploads');
+// Ensure uploads and frontend directories exist safely (handling read-only filesystems in serverless like Vercel/Lambda)
+const uploadDir = process.env.VERCEL ? path.join('/tmp', 'uploads') : path.join(__dirname, 'uploads');
 const frontendDir = path.join(__dirname, '..', 'frontend');
-const imagesDir = path.join(frontendDir, 'images');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
+try {
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+} catch (e) {
+  // Read-only filesystem in serverless environments
+}
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB (non-blocking in traditional server, will be cached in serverless)
+connectDB().catch((err) => {
+  console.warn('Initial MongoDB connection deferred:', err.message);
+});
 
 // 1. Helmet HTTP Security Headers (with CSP configured for Google Fonts and QR data URLs)
 app.use(
@@ -121,6 +125,10 @@ const safeMount = (routePath, routerFile) => {
   try {
     const route = require(routerFile);
     app.use(routePath, route);
+    // Also mount without /api prefix for maximum serverless compatibility
+    if (routePath.startsWith('/api/')) {
+      app.use(routePath.replace('/api', ''), route);
+    }
   } catch (err) {
     if (err.code !== 'MODULE_NOT_FOUND') {
       console.warn(`Warning loading ${routerFile}:`, err.message);
@@ -168,8 +176,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Server
-if (process.env.NODE_ENV !== 'test') {
+// Start Server (only when run directly as a process, not when imported by Vercel serverless functions)
+if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🌾 FieldRoot Connect running on http://localhost:${PORT}`);
     console.log(`🔒 Security features active (Helmet, Rate Limiting, NoSQL Sanitizer, XSS Defense)`);

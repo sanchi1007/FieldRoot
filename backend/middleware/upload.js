@@ -4,10 +4,17 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { logSecurityEvent } = require('./security');
 
-// Ensure destination directory exists
-const uploadDirectory = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadDirectory)) {
-  fs.mkdirSync(uploadDirectory, { recursive: true });
+// Ensure destination directory exists safely (handles read-only filesystems in serverless)
+const uploadDirectory = process.env.VERCEL
+  ? path.join('/tmp', 'uploads')
+  : path.join(__dirname, '..', 'uploads');
+
+try {
+  if (!fs.existsSync(uploadDirectory)) {
+    fs.mkdirSync(uploadDirectory, { recursive: true });
+  }
+} catch (e) {
+  console.warn('Filesystem is read-only, skipping uploadDirectory creation:', e.message);
 }
 
 // Allowed extensions & mimetypes

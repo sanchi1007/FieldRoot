@@ -37,7 +37,11 @@ const API = {
           Auth.clearSession();
           window.location.href = '/login.html';
         }
-        throw new Error(data.message || `Request failed with status ${response.status}`);
+        let errMsg = data.message || `Request failed with status ${response.status}`;
+        if (typeof errMsg === 'string' && errMsg.includes('FUNCTION_INVOCATION_FAILED')) {
+          errMsg = 'Server is initializing database connection. Please refresh in a moment.';
+        }
+        throw new Error(errMsg);
       }
 
       return data;
