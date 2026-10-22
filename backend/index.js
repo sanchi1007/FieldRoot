@@ -17,6 +17,9 @@ const {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust Vercel and reverse proxies for client IP rate limiting
+app.set('trust proxy', 1);
+
 // Ensure uploads and frontend directories exist safely (handling read-only filesystems in serverless like Vercel/Lambda)
 const uploadDir = process.env.VERCEL ? path.join('/tmp', 'uploads') : path.join(__dirname, 'uploads');
 const frontendDir = path.join(__dirname, '..', 'frontend');
