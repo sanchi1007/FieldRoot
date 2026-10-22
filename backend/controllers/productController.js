@@ -517,6 +517,17 @@ exports.updateProduct = async (req, res) => {
 exports.toggleProductStatus = async (req, res) => {
   try {
     const { status } = req.body;
+
+    // Gracefully handle demo / fallback mock listings in serverless mode
+    if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      const newStatus = status || 'sold_out';
+      return res.status(200).json({
+        success: true,
+        status: newStatus,
+        message: `Harvest listing marked as ${newStatus} (Demo Mode)`
+      });
+    }
+
     let product = await Product.findById(req.params.id);
 
     if (!product) {

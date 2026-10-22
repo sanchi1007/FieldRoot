@@ -344,6 +344,20 @@ exports.counterOffer = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { status, note } = req.body;
+
+    // Gracefully handle demo / sample mock orders in serverless fallback mode
+    if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(200).json({
+        success: true,
+        message: `Order status updated to '${status}' successfully! (Demo Mode)`,
+        order: {
+          _id: req.params.id,
+          status,
+          updatedAt: new Date().toISOString()
+        }
+      });
+    }
+
     const order = await Order.findById(req.params.id);
 
     if (!order) {

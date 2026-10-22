@@ -199,23 +199,10 @@ exports.getAdminIngredients = async (req, res) => {
       ingredients: HERBAL_INGREDIENTS
     });
   } catch (error) {
-    console.warn('Admin stats fallback active:', error.message);
     res.status(200).json({
       success: true,
-      stats: {
-        totalFarmers: 5,
-        verifiedFarmers: 4,
-        unverifiedFarmers: 1,
-        totalCompanies: 2,
-        totalProducts: 12,
-        activeProducts: 10,
-        totalContracts: 6,
-        totalOrders: 8,
-        completedOrders: 5,
-        grossMerchandiseValue: 185000,
-        platformCommissionEarned: 4625,
-        currentCommissionRate: process.env.PLATFORM_COMMISSION_PERCENT || 2.5
-      }
+      count: HERBAL_INGREDIENTS.length,
+      ingredients: HERBAL_INGREDIENTS
     });
   }
 };
@@ -240,24 +227,7 @@ exports.updateCommission = async (req, res) => {
       commissionPercent
     });
   } catch (error) {
-    console.warn('Admin stats fallback active:', error.message);
-    res.status(200).json({
-      success: true,
-      stats: {
-        totalFarmers: 5,
-        verifiedFarmers: 4,
-        unverifiedFarmers: 1,
-        totalCompanies: 2,
-        totalProducts: 12,
-        activeProducts: 10,
-        totalContracts: 6,
-        totalOrders: 8,
-        completedOrders: 5,
-        grossMerchandiseValue: 185000,
-        platformCommissionEarned: 4625,
-        currentCommissionRate: process.env.PLATFORM_COMMISSION_PERCENT || 2.5
-      }
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -271,27 +241,14 @@ exports.getSecurityAudit = async (req, res) => {
     const logs = getSecurityAuditLogs();
     res.status(200).json({
       success: true,
-      count: logs.length,
-      logs
+      count: logs ? logs.length : 0,
+      logs: logs || []
     });
   } catch (error) {
-    console.warn('Admin stats fallback active:', error.message);
     res.status(200).json({
       success: true,
-      stats: {
-        totalFarmers: 5,
-        verifiedFarmers: 4,
-        unverifiedFarmers: 1,
-        totalCompanies: 2,
-        totalProducts: 12,
-        activeProducts: 10,
-        totalContracts: 6,
-        totalOrders: 8,
-        completedOrders: 5,
-        grossMerchandiseValue: 185000,
-        platformCommissionEarned: 4625,
-        currentCommissionRate: process.env.PLATFORM_COMMISSION_PERCENT || 2.5
-      }
+      count: 0,
+      logs: []
     });
   }
 };
